@@ -521,24 +521,46 @@
       courses.forEach(course => {
         const doneCount = course.items.filter(i => i.isDone).length;
         const totalCount = course.items.length;
+        const remainingCount = totalCount - doneCount;
         const percent = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0;
+        const isAllDone = (doneCount === totalCount && totalCount > 0);
 
         const card = document.createElement('div');
         card.className = 'course-card-mobile';
         card.innerHTML = `
-          <div class="course-title-mobile">${course.name}</div>
+          <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+            <div class="course-title-mobile">${course.name}</div>
+            <button class="btn btn-slate" style="padding:2px 6px; font-size:10px; color:#94a3b8;" onclick="resetCourseStatus('${course.id}', event)">
+              🔄 リセット
+            </button>
+          </div>
           <div class="course-desc-mobile">${course.memo || 'ルート配送'}</div>
           <div class="course-stats">
             <span>件数: <b>${totalCount}件</b></span>
-            <span style="color:#38bdf8;">進捗: <b>${doneCount}/${totalCount}</b> (${percent}%)</span>
+            <span style="color:${isAllDone ? '#4ade80' : '#38bdf8'}; font-weight:bold;">
+              進捗: ${doneCount}/${totalCount} (${percent}%)
+            </span>
           </div>
-          <button class="btn btn-blue" style="width:100%; font-size:15px; padding:12px;" onclick="startDeliveryWorkflow('${course.id}')">
-            🚚 このコースで配送開始
+          <button class="btn ${isAllDone ? 'btn-green' : 'btn-blue'}" style="width:100%; font-size:15px; padding:12px;" onclick="startDeliveryWorkflow('${course.id}')">
+            ${isAllDone ? '✅ 配達完了済（確認・再配送）' : `🚚 配送を再開する（残り ${remainingCount}件）`}
           </button>
         `;
         container.appendChild(card);
       });
     }
+
+    window.resetCourseStatus = function(courseId, event) {
+      if (event) event.stopPropagation();
+      if (!confirm("このコースの配達完了状況をすべてリセットして、最初から配送できるようにしますか？")) return;
+      const courses = getCourses();
+      const target = courses.find(c => c.id === courseId);
+      if (target) {
+        target.items.forEach(i => i.isDone = false);
+        saveCourses(courses);
+        refreshCourses();
+        alert("✅ 配達完了状況をリセットしました！");
+      }
+    };
 
     // --- 1. 配送開始（コース起動） ---
     window.startDeliveryWorkflow = function(courseId) {
@@ -559,12 +581,10 @@
     };
 
     window.exitToCourseSelect = function() {
-      if (confirm("コース一覧に戻りますか？")) {
-        stopGpsTracking();
-        document.getElementById('view-nav-main').style.display = 'none';
-        document.getElementById('view-course-select').style.display = 'flex';
-        refreshCourses();
-      }
+      stopGpsTracking();
+      document.getElementById('view-nav-main').style.display = 'none';
+      document.getElementById('view-course-select').style.display = 'flex';
+      refreshCourses();
     };
 
     // --- 2. 次の行き先を選択するプロンプト表示 ---
@@ -573,22 +593,59 @@
       const undoneItems = currentCourse.items.filter(i => !i.isDone);
 
       if (undoneItems.length === 0) {
-        alert("🎉 本日の配達がすべて完了しました！お疲れ様でした。");
+        // 全件完了している場合：完了サマリーカードを上部に表示し、再配送や一覧選択を可能にする
         document.getElementById('transit-target-card').style.display = 'none';
-        document.getElementById('select-next-modal').style.display = 'none';
+        document.getElementById('select-next-modal').style.display = 'flex';
+        document.getElementById('modalHeaderLabel').innerText = "【🎉 全配達完了】";
+        document.getElementById('modalDefaultTargetName').innerHTML = `<span style="color:#4ade80;">本日の配達はすべて完了しています</span>`;
+        document.getElementById('modalDefaultTargetAddr').innerText = `全 ${currentCourse.items.length} 件のお届けが完了しました。`;
+
+        const modalEl = document.getElementById('select-next-modal');
+        modalEl.querySelector('.modal-content-card').innerHTML = `
+          <div class="modal-headline" style="color:#4ade80;">🎉 全件配達完了</div>
+          <div class="modal-target-title" style="color:#4ade80; font-size:18px;">本日の配達はすべて完了しています</div>
+          <div class="modal-target-addr">配達完了データは保持されています。一覧から選んで再配送や確認が可能です。</div>
+          <button class="btn btn-blue" style="width:100%; font-size:14px; padding:12px; margin-bottom:8px;" onclick="openAllDestinationsModal()">
+            📋 配送先一覧から選んで再度向かう
+          </button>
+          <button class="btn btn-slate" style="width:100%; font-size:13px; padding:10px;" onclick="resetCurrentCourseAndRestart()">
+            🔄 全件を未配達にリセットして再配送
+          </button>
+        `;
         plotMarkers();
         return;
       }
 
       const nextDefault = undoneItems[0];
-      document.getElementById('modalHeaderLabel').innerText = isFirst ? "【1件目の配送先を選択】" : "【次の配送先を選択】";
-      document.getElementById('modalDefaultTargetName').innerText = `#${nextDefault.order || nextDefault.id} ${nextDefault.name} 様`;
-      document.getElementById('modalDefaultTargetAddr').innerText = nextDefault.address;
+      const modalEl = document.getElementById('select-next-modal');
+      modalEl.querySelector('.modal-content-card').innerHTML = `
+        <div class="modal-headline" id="modalHeaderLabel">${isFirst ? "【1件目の配送先を選択】" : "【次の配送先を選択】"}</div>
+        <div class="modal-target-title" id="modalDefaultTargetName">#${nextDefault.order || nextDefault.id} ${nextDefault.name} 様</div>
+        <div class="modal-target-addr" id="modalDefaultTargetAddr">${nextDefault.address}</div>
+        <button class="btn btn-blue" style="width:100%; font-size:15px; padding:14px; margin-bottom:10px;" onclick="chooseNextSequentialTarget()">
+          🚚 この順番通りに出発する
+        </button>
+        <button class="btn btn-slate" style="width:100%; font-size:14px; padding:12px;" onclick="openAllDestinationsModal()">
+          📋 別の配送先を一覧から選ぶ
+        </button>
+      `;
 
       document.getElementById('select-next-modal').style.display = 'flex';
       document.getElementById('transit-target-card').style.display = 'none';
       plotMarkers();
     }
+
+    window.resetCurrentCourseAndRestart = function() {
+      if (!confirm("すべての配達先を未配達に戻して、最初から配送をやり直しますか？")) return;
+      currentCourse.items.forEach(i => i.isDone = false);
+      const courses = getCourses();
+      const idx = courses.findIndex(c => c.id === currentCourse.id);
+      if (idx !== -1) {
+        courses[idx] = currentCourse;
+        saveCourses(courses);
+      }
+      promptNextDestinationSelection(true);
+    };
 
     window.chooseNextSequentialTarget = function() {
       const undoneItems = currentCourse.items.filter(i => !i.isDone);
@@ -608,11 +665,19 @@
           <div style="display:flex; justify-content:space-between; align-items:center;">
             <b style="font-size:14px;">#${item.order || item.id} ${item.name} 様</b>
             <span style="font-size:11px; padding:2px 6px; border-radius:4px; background:${item.isDone ? '#10b981' : '#1d4ed8'}; color:#fff;">
-              ${item.isDone ? '配達済' : '未配達'}
+              ${item.isDone ? '✅ 配達済' : '未配達'}
             </span>
           </div>
           <div style="font-size:12px; color:#94a3b8; margin:4px 0;">${item.address}</div>
           ${item.memo ? `<div style="font-size:11px; color:#fbbf24;">📝 ${item.memo}</div>` : ''}
+          <div style="display:flex; gap:6px; margin-top:6px;">
+            <button class="btn btn-blue" style="flex:1; padding:6px; font-size:11px;" onclick="event.stopPropagation(); setTargetAndBeginTransitDirect(${item.id})">
+              🚚 ここへ向かう
+            </button>
+            <button class="btn btn-slate" style="padding:6px 8px; font-size:11px;" onclick="event.stopPropagation(); toggleItemDoneState(${item.id})">
+              ${item.isDone ? '↩ 未完に戻す' : '✅ 完了にする'}
+            </button>
+          </div>
         `;
         card.onclick = () => {
           document.getElementById('all-destinations-modal').style.display = 'none';
@@ -622,6 +687,22 @@
       });
 
       document.getElementById('all-destinations-modal').style.display = 'flex';
+    };
+
+    window.toggleItemDoneState = function(itemId) {
+      const item = currentCourse.items.find(i => i.id === itemId);
+      if (item) {
+        item.isDone = !item.isDone;
+        const courses = getCourses();
+        const idx = courses.findIndex(c => c.id === currentCourse.id);
+        if (idx !== -1) {
+          courses[idx] = currentCourse;
+          saveCourses(courses);
+        }
+        openAllDestinationsModal();
+        plotMarkers();
+        updateNavStats();
+      }
     };
 
     window.closeAllDestinationsModal = function() {
