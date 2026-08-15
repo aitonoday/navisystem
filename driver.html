@@ -618,6 +618,7 @@
 
     window.exitToCourseSelect = function() {
       stopGpsTracking();
+      clearActiveSessionState();
       document.getElementById('view-nav-main').style.display = 'none';
       document.getElementById('view-course-select').style.display = 'flex';
       refreshCourses();
@@ -749,6 +750,7 @@
     // --- 3. 配送先を確定して移動・ナビ開始 ---
     window.setTargetAndBeginTransit = function(item) {
       currentTargetItem = item;
+      saveActiveSessionState();
       document.getElementById('select-next-modal').style.display = 'none';
       document.getElementById('all-destinations-modal').style.display = 'none';
       document.getElementById('transit-target-card').style.display = 'block';
@@ -928,16 +930,43 @@
 
       alert(`✅ #${currentTargetItem.order || currentTargetItem.id} ${currentTargetItem.name} 様への配達が完了しました！`);
       currentTargetItem = null;
+      clearActiveSessionState();
 
       promptNextDestinationSelection(false);
     };
+    const ACTIVE_STATE_KEY = 'lively_navi_active_state';
+
+    function saveActiveSessionState() {
+      if (currentCourse && currentTargetItem) {
+        localStorage.setItem(ACTIVE_STATE_KEY, JSON.stringify({
+          courseId: currentCourse.id,
+          targetItemId: currentTargetItem.id
+        }));
+      }
+    }
+
+    function clearActiveSessionState() {
+      localStorage.removeItem(ACTIVE_STATE_KEY);
+    }
 
     window.openExternalGoogleMap = function() {
       if (!currentTargetItem) return;
-      window.open(`https://www.google.com/maps/dir/?api=1&destination=${currentTargetItem.lat},${currentTargetItem.lng}`);
-    };
+      saveActiveSessionState();
 
-    function updateNavStats() {
+      const url = `https://www.google.com/maps/dir/?api=1&destination=${currentTargetItem.lat},${currentTargetItem.lng}`;
+      
+      // 別ウィンドウ/ネイティブアプリで安全に起動
+      const win = window.open(url, '_blank', 'noopener,noreferrer');
+      if (!win) {
+        const link = document.createElement('a');
+        link.href = url;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    };
       const doneCount = currentCourse.items.filter(i => i.isDone).length;
       const totalCount = currentCourse.items.length;
       document.getElementById('navDeliveredCount').innerText = doneCount;
@@ -1031,9 +1060,34 @@
       isGpsRecording = false;
     }
 
-    // 初期化 & クラウドコース購読
+    // 初期化 & クラウドコース購読 & 運行セッション自動復元
     function initDriverApp() {
       refreshCourses();
+
+      // Googleマップ起動時や画面復帰時の自動セッション復元
+      try {
+        const savedStateRaw = localStorage.getItem(ACTIVE_STATE_KEY);
+        if (savedStateRaw) {
+          const state = JSON.parse(savedStateRaw);
+          const courses = getCourses();
+          const targetCourse = courses.find(c => c.id === state.courseId);
+          if (targetCourse) {
+            const targetItem = targetCourse.items.find(i => i.id === state.targetItemId && !i.isDone);
+            if (targetItem) {
+              currentCourse = targetCourse;
+              document.getElementById('view-course-select').style.display = 'none';
+              document.getElementById('view-nav-main').style.display = 'flex';
+              initMap();
+              startContinuousGpsTracking();
+              setTargetAndBeginTransit(targetItem);
+              console.log("✅ Restored active transit session:", targetItem.name);
+            }
+          }
+        }
+      } catch (e) {
+        console.warn("Restore state error:", e);
+      }
+
       if (window.subscribeCoursesFromCloud) {
         subscribeCoursesFromCloud((cloudCourses) => {
           if (cloudCourses && cloudCourses.length > 0) {
