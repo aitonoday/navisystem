@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>NaviSystem - 配達ナビゲーション＆運行管理</title>
+  <title>Lively Navi - 配達ナビゲーション＆運行管理</title>
   
   <!-- PWA設定 -->
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0f172a">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="apple-touch-icon" href="logo.png">
 
   <style>
     * { box-sizing: border-box; }
@@ -29,28 +29,29 @@
       padding: 20px;
     }
     .portal-card {
-      background: rgba(30, 41, 59, 0.8);
+      background: rgba(30, 41, 59, 0.85);
       border: 1px solid #334155;
-      backdrop-filter: blur(10px);
-      border-radius: 16px;
-      padding: 32px 24px;
+      backdrop-filter: blur(12px);
+      border-radius: 18px;
+      padding: 36px 24px;
       max-width: 440px;
       width: 100%;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+      box-shadow: 0 12px 32px rgba(0,0,0,0.4);
     }
-    .logo {
-      font-size: 48px;
-      margin-bottom: 12px;
-    }
-    h1 {
-      margin: 0 0 8px;
-      font-size: 24px;
-      color: #38bdf8;
+    .logo-img {
+      max-width: 260px;
+      width: 100%;
+      height: auto;
+      background: #ffffff;
+      padding: 8px 16px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.2);
     }
     p {
       margin: 0 0 28px;
       font-size: 13px;
-      color: #94a3b8;
+      color: #cbd5e1;
       line-height: 1.5;
     }
     .btn-group {
@@ -71,11 +72,12 @@
       transition: all 0.2s;
     }
     .btn-driver {
-      background: #2563eb;
+      background: #1d4ed8;
       color: #fff;
+      box-shadow: 0 4px 12px rgba(29, 78, 216, 0.35);
     }
     .btn-driver:hover {
-      background: #1d4ed8;
+      background: #1e40af;
       transform: translateY(-1px);
     }
     .btn-admin {
@@ -95,7 +97,6 @@
     }
   </style>
   <script>
-    // スマホ端末（画面幅768px以下またはモバイルUA）の場合は自動的にドライバー画面へ遷移
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
     if (isMobile && !window.location.search.includes('noredirect')) {
       window.location.replace('driver.html');
@@ -105,8 +106,7 @@
 <body>
 
   <div class="portal-card">
-    <div class="logo">🚚</div>
-    <h1>NaviSystem</h1>
+    <img src="logo.png" alt="Lively Navi" class="logo-img">
     <p>ルート配送ドライバー向けナビゲーション＆コース運行管理システム</p>
 
     <div class="btn-group">

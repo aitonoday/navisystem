@@ -1,6 +1,6 @@
 {
-  "name": "NaviSystem 配達ナビ",
-  "short_name": "NaviSystem",
+  "name": "Lively Navi 配達ナビ",
+  "short_name": "Lively Navi",
   "description": "ルート配送ドライバー向けナビゲーション＆運行管理システム",
   "start_url": "./index.html",
   "display": "standalone",
