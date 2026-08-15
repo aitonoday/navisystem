@@ -57,6 +57,8 @@
     .btn-green:hover { background: #15803d; }
     .btn-amber { background: #d97706; color: #fff; }
     .btn-amber:hover { background: #b45309; }
+    .btn-purple { background: #9333ea; color: #fff; }
+    .btn-purple:hover { background: #7e22ce; }
     .btn-slate { background: #334155; color: #f8fafc; }
     .btn-slate:hover { background: #475569; }
     .btn-red { background: #dc2626; color: #fff; }
@@ -207,7 +209,7 @@
       font-size: 12px;
     }
 
-    /* ルート検索ツールバー（地図上フローティング） */
+    /* ルートツールバー（地図上フローティング） */
     #route-planner-bar {
       position: absolute;
       top: 16px;
@@ -217,7 +219,7 @@
       border: 1px solid #334155;
       backdrop-filter: blur(8px);
       border-radius: 12px;
-      padding: 12px 18px;
+      padding: 10px 16px;
       z-index: 1000;
       display: flex;
       align-items: center;
@@ -225,27 +227,45 @@
       box-shadow: 0 8px 24px rgba(0,0,0,0.4);
       flex-wrap: wrap;
     }
+    .mode-switch-btn {
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: bold;
+      border: 1px solid #475569;
+      background: #1e293b;
+      color: #94a3b8;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .mode-switch-btn.active {
+      background: #2563eb;
+      color: #fff;
+      border-color: #2563eb;
+    }
+
     .route-select-item {
       display: flex;
       align-items: center;
-      gap: 8px;
-      font-size: 13px;
+      gap: 6px;
+      font-size: 12px;
       flex: 1;
-      min-width: 200px;
+      min-width: 180px;
     }
     .route-select-item select {
       flex: 1;
-      padding: 6px 10px;
+      padding: 6px 8px;
       background: #1e293b;
       border: 1px solid #475569;
       color: #f8fafc;
       border-radius: 6px;
       font-size: 12px;
     }
+
     #routeInfoPill {
       display: none;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
       background: #1e293b;
       padding: 4px 12px;
       border-radius: 20px;
@@ -255,11 +275,33 @@
       font-weight: bold;
     }
 
+    /* 手動描画ガイドバー */
+    #draw-guide-bar {
+      position: absolute;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(15, 23, 42, 0.95);
+      border: 2px solid #a855f7;
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 30px;
+      z-index: 1000;
+      display: none;
+      align-items: center;
+      gap: 14px;
+      font-size: 13px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    }
+
     /* 右パネル：マップ */
     #map {
       flex: 1;
       height: 100%;
       background: #0b0f19;
+    }
+    .drawing-mode-cursor {
+      cursor: crosshair !important;
     }
   </style>
 </head>
@@ -278,42 +320,69 @@
   </div>
 
   <div id="container">
-    <!-- ルート描画フローティングバー -->
+    <!-- ルートツールバー -->
     <div id="route-planner-bar">
-      <div style="font-weight:bold; font-size:13px; color:#38bdf8; display:flex; align-items:center; gap:6px;">
-        <span>🗺️ 区間ルート描画:</span>
-      </div>
-
-      <div class="route-select-item">
-        <span>🚩 <b>A (出発)</b>:</span>
-        <select id="routeFromSelect">
-          <option value="">-- ピンまたはリストから選択 --</option>
-        </select>
-      </div>
-
-      <div class="route-select-item">
-        <span>🏁 <b>B (到着)</b>:</span>
-        <select id="routeToSelect">
-          <option value="">-- ピンまたはリストから選択 --</option>
-        </select>
-      </div>
-
-      <div style="display:flex; gap:8px; align-items:center;">
-        <button class="btn btn-blue" style="padding:6px 14px;" onclick="calculateAndDrawRoute()">
-          🚀 ルート描画
+      <!-- モード切り替え -->
+      <div style="display:flex; gap:6px; background:#0f172a; padding:3px; border-radius:8px; border:1px solid #334155;">
+        <button id="modeAutoBtn" class="mode-switch-btn active" onclick="switchRouteMode('auto')">
+          🚩 A➔B 自動探索
         </button>
-        <button class="btn btn-slate" style="padding:6px 10px;" onclick="clearDrawnRoute()">
+        <button id="modeManualBtn" class="mode-switch-btn" onclick="switchRouteMode('manual')">
+          ✏️ 地図クリック手動描画
+        </button>
+      </div>
+
+      <!-- A➔B 自動探索コントロール -->
+      <div id="autoControls" style="display:flex; align-items:center; gap:10px; flex:1; flex-wrap:wrap;">
+        <div class="route-select-item">
+          <span>🚩 <b>A (出発)</b>:</span>
+          <select id="routeFromSelect"><option value="">-- ピンまたはリストから選択 --</option></select>
+        </div>
+        <div class="route-select-item">
+          <span>🏁 <b>B (到着)</b>:</span>
+          <select id="routeToSelect"><option value="">-- ピンまたはリストから選択 --</option></select>
+        </div>
+        <button class="btn btn-blue" style="padding:6px 12px; font-size:12px;" onclick="calculateAndDrawRoute()">
+          🚀 ルート計算
+        </button>
+        <button class="btn btn-slate" style="padding:6px 10px; font-size:12px;" onclick="clearDrawnRoute()">
           ✕ 解除
         </button>
       </div>
 
+      <!-- 手動描画コントロール -->
+      <div id="manualControls" style="display:none; align-items:center; gap:10px; flex:1; flex-wrap:wrap;">
+        <div style="display:flex; align-items:center; gap:6px; font-size:12px;">
+          <span>吸着:</span>
+          <select id="manualSnapType" style="padding:4px 8px; background:#1e293b; color:#fff; border:1px solid #475569; border-radius:4px;">
+            <option value="snap">🛣️ 道路スナップ（推奨）</option>
+            <option value="straight">📏 直線フリー</option>
+          </select>
+        </div>
+        <button id="btnUndoPoint" class="btn btn-slate" style="padding:6px 10px; font-size:12px;" onclick="undoLastManualPoint()">
+          ↩ 1つ戻す
+        </button>
+        <button class="btn btn-slate" style="padding:6px 10px; font-size:12px;" onclick="clearManualRoute()">
+          🗑️ クリア
+        </button>
+      </div>
+
+      <!-- 結果情報ピル -->
       <div id="routeInfoPill">
         <span>📏 <span id="routeDistanceText">0 km</span></span>
-        <span>⏱️ <span id="routeDurationText">0 分</span></span>
+        <span id="routeDurationSpan">⏱️ <span id="routeDurationText">0 分</span></span>
         <button class="btn btn-amber" style="padding:2px 8px; font-size:11px;" onclick="saveCurrentDrawnRouteAsGeoJson()">
           💾 固定ルートとして保存
         </button>
       </div>
+    </div>
+
+    <!-- 手動描画中 ガイドバナー -->
+    <div id="draw-guide-bar">
+      <span>✏️ <b>地図上をクリック</b> してルートを描画中... (通過地点: <b id="manualPointCount">0</b> 点)</span>
+      <button class="btn btn-purple" style="padding:4px 12px; font-size:12px;" onclick="finishManualDrawing()">
+        ✅ 描画完了・確定
+      </button>
     </div>
 
     <!-- 左パネル -->
@@ -380,9 +449,15 @@
 
     let activeMarkers = [];
     let currentParsedItems = [];
-    let activeLoadedItems = []; // 現在地図上に表示されている配達先
+    let activeLoadedItems = [];
     let currentDrawnRouteLayer = null;
     let lastCalculatedGeoJson = null;
+
+    // 手動描画用変数
+    let routeMode = 'auto'; // 'auto' | 'manual'
+    let manualPoints = []; // [ { lat, lng } ]
+    let manualPointMarkers = [];
+    let manualRouteSegments = []; // GeoJSON line layers
 
     const STORAGE_KEY = 'navisystem_courses';
 
@@ -418,11 +493,163 @@
       }
     }
 
+    // --- モード切り替え (自動A-B / 手動クリック) ---
+    window.switchRouteMode = function(mode) {
+      routeMode = mode;
+      const mapEl = document.getElementById('map');
+
+      if (mode === 'auto') {
+        document.getElementById('modeAutoBtn').classList.add('active');
+        document.getElementById('modeManualBtn').classList.remove('active');
+        document.getElementById('autoControls').style.display = 'flex';
+        document.getElementById('manualControls').style.display = 'none';
+        document.getElementById('draw-guide-bar').style.display = 'none';
+        mapEl.classList.remove('drawing-mode-cursor');
+      } else {
+        document.getElementById('modeAutoBtn').classList.remove('active');
+        document.getElementById('modeManualBtn').classList.add('active');
+        document.getElementById('autoControls').style.display = 'none';
+        document.getElementById('manualControls').style.display = 'flex';
+        document.getElementById('draw-guide-bar').style.display = 'flex';
+        mapEl.classList.add('drawing-mode-cursor');
+        clearDrawnRoute();
+      }
+    };
+
+    // --- 地図クリックイベント (手動描画) ---
+    map.on('click', async (e) => {
+      if (routeMode !== 'manual') return;
+
+      const lat = e.latlng.lat;
+      const lng = e.latlng.lng;
+      const pt = { lat, lng };
+
+      // マーカー追加
+      const ptMarker = L.circleMarker([lat, lng], {
+        radius: 6,
+        fillColor: "#a855f7",
+        color: "#ffffff",
+        weight: 2,
+        fillOpacity: 1
+      }).addTo(map);
+      manualPointMarkers.push(ptMarker);
+
+      manualPoints.push(pt);
+      document.getElementById('manualPointCount').innerText = manualPoints.length;
+
+      // 2点以上あればラインを描画
+      if (manualPoints.length >= 2) {
+        const prevPt = manualPoints[manualPoints.length - 2];
+        const snapType = document.getElementById('manualSnapType').value;
+
+        if (snapType === 'snap') {
+          // OSRM 道路スナップ探索
+          const url = `https://router.project-osrm.org/route/v1/driving/${prevPt.lng},${prevPt.lat};${lng},${lat}?overview=full&geometries=geojson`;
+          try {
+            const res = await fetch(url);
+            const data = await res.json();
+            if (data.routes && data.routes.length > 0) {
+              const segLayer = L.geoJSON(data.routes[0].geometry, {
+                style: { color: '#a855f7', weight: 5, opacity: 0.9 }
+              }).addTo(map);
+              manualRouteSegments.push({ layer: segLayer, geometry: data.routes[0].geometry, distance: data.routes[0].distance, duration: data.routes[0].duration });
+            } else {
+              drawStraightSegment(prevPt, pt);
+            }
+          } catch (err) {
+            drawStraightSegment(prevPt, pt);
+          }
+        } else {
+          drawStraightSegment(prevPt, pt);
+        }
+
+        updateManualRouteSummary();
+      }
+    });
+
+    function drawStraightSegment(p1, p2) {
+      const geojson = {
+        type: "LineString",
+        coordinates: [[p1.lng, p1.lat], [p2.lng, p2.lat]]
+      };
+      const segLayer = L.geoJSON(geojson, {
+        style: { color: '#a855f7', weight: 5, opacity: 0.9 }
+      }).addTo(map);
+      const d = map.distance([p1.lat, p1.lng], [p2.lat, p2.lng]);
+      manualRouteSegments.push({ layer: segLayer, geometry: geojson, distance: d, duration: d / 8.33 }); // 約30km/h換算
+    }
+
+    function updateManualRouteSummary() {
+      let totalDist = 0;
+      let totalDur = 0;
+      const allCoords = [];
+
+      manualRouteSegments.forEach(s => {
+        totalDist += s.distance || 0;
+        totalDur += s.duration || 0;
+        if (s.geometry && s.geometry.coordinates) {
+          allCoords.push(...s.geometry.coordinates);
+        }
+      });
+
+      const distKm = (totalDist / 1000).toFixed(2);
+      const durMin = Math.round(totalDur / 60);
+
+      document.getElementById('routeDistanceText').innerText = `${distKm} km`;
+      document.getElementById('routeDurationText').innerText = `${durMin} 分`;
+      document.getElementById('routeInfoPill').style.display = 'inline-flex';
+
+      lastCalculatedGeoJson = {
+        type: "Feature",
+        properties: {
+          route_name: `手動描画ルート_${new Date().toLocaleDateString()}`,
+          distance_km: parseFloat(distKm),
+          duration_min: durMin,
+          points_count: manualPoints.length,
+          created_at: new Date().toISOString()
+        },
+        geometry: {
+          type: "LineString",
+          coordinates: allCoords
+        }
+      };
+    }
+
+    window.undoLastManualPoint = function() {
+      if (manualPoints.length === 0) return;
+      manualPoints.pop();
+      const lastMarker = manualPointMarkers.pop();
+      if (lastMarker) map.removeLayer(lastMarker);
+
+      if (manualRouteSegments.length > 0) {
+        const lastSeg = manualRouteSegments.pop();
+        if (lastSeg.layer) map.removeLayer(lastSeg.layer);
+      }
+
+      document.getElementById('manualPointCount').innerText = manualPoints.length;
+      updateManualRouteSummary();
+    };
+
+    window.clearManualRoute = function() {
+      manualPointMarkers.forEach(m => map.removeLayer(m));
+      manualRouteSegments.forEach(s => map.removeLayer(s.layer));
+      manualPointMarkers = [];
+      manualRouteSegments = [];
+      manualPoints = [];
+      document.getElementById('manualPointCount').innerText = '0';
+      document.getElementById('routeInfoPill').style.display = 'none';
+      lastCalculatedGeoJson = null;
+    };
+
+    window.finishManualDrawing = function() {
+      if (manualPoints.length < 2) return alert("2地点以上クリックしてください。");
+      alert(`✅ ルート描画が完了しました！（全 ${manualPoints.length} 地点・距離 ${document.getElementById('routeDistanceText').innerText}）\n「💾 固定ルートとして保存」ボタンからGeoJSONとして保存できます。`);
+    };
+
     // --- 国土地理院 API 住所変換 ---
     async function geocodeAddress(address) {
       if (!address) return null;
       let cleanAddr = address.trim().replace(/[ー−―-]/g, '-');
-      
       let result = await fetchGsi(cleanAddr);
       if (result) return result;
 
@@ -488,6 +715,7 @@
 
       clearMap();
       clearDrawnRoute();
+      clearManualRoute();
       currentParsedItems = [];
       document.getElementById('importSettings').style.display = 'block';
       document.getElementById('courseNameInput').value = `${new Date().toLocaleDateString()} 配達便 (${rows.length - 1}件)`;
@@ -651,6 +879,7 @@
       saveCourses(courses);
       clearMap();
       clearDrawnRoute();
+      clearManualRoute();
     };
 
     function clearMap() {
@@ -676,7 +905,7 @@
             <b style="font-size:13px;">#${item.id} ${item.name}</b><br>
             <span style="color:#64748b;">${item.address}</span><br>
             ${item.time ? `<span style="color:#2563eb;">🕒 ${item.time}</span><br>` : ''}
-            ${item.memo ? `<span style="color:#f59e0b;">📝 ${item.memo}</span><br>` : ''}
+            ${item.memo ? `<span style="color:#f59e0b;">📝 ${item.memo}</span>` : ''}
             <div style="display:flex; gap:6px; margin-top:8px;">
               <button class="btn btn-blue" style="flex:1; padding:4px 6px; font-size:11px;" onclick="setRoutePoint('from', ${item.id})">🚩 A(出発)</button>
               <button class="btn btn-green" style="flex:1; padding:4px 6px; font-size:11px;" onclick="setRoutePoint('to', ${item.id})">🏁 B(到着)</button>
@@ -691,7 +920,7 @@
       map.fitBounds(group.getBounds(), { padding: [40, 40] });
     }
 
-    // --- 区間ルート描画機能 (Aさん ➔ Bさん) ---
+    // --- 自動 A➔B ルート計算 ---
     function updateRouteDropdowns() {
       const fromSel = document.getElementById('routeFromSelect');
       const toSel = document.getElementById('routeToSelect');
@@ -711,7 +940,6 @@
       if (prevFrom) fromSel.value = prevFrom;
       if (prevTo) toSel.value = prevTo;
 
-      // 2件以上あればデフォルトで1番目と2番目をセット
       if (activeLoadedItems.length >= 2 && !fromSel.value && !toSel.value) {
         fromSel.value = activeLoadedItems[0].id;
         toSel.value = activeLoadedItems[1].id;
@@ -719,6 +947,7 @@
     }
 
     window.setRoutePoint = function(type, id) {
+      switchRouteMode('auto');
       if (type === 'from') {
         document.getElementById('routeFromSelect').value = id;
       } else {
@@ -726,7 +955,6 @@
       }
       map.closePopup();
 
-      // 両方セットされていれば自動計算
       const fromId = document.getElementById('routeFromSelect').value;
       const toId = document.getElementById('routeToSelect').value;
       if (fromId && toId && fromId !== toId) {
@@ -756,24 +984,18 @@
           const route = data.routes[0];
           clearDrawnRoute();
 
-          // ルートライン描画 (太いグラデーション風オレンジ・青)
           currentDrawnRouteLayer = L.geoJSON(route.geometry, {
-            style: {
-              color: '#38bdf8',
-              weight: 6,
-              opacity: 0.9,
-              dashArray: '8, 8'
-            }
+            style: { color: '#38bdf8', weight: 6, opacity: 0.9, dashArray: '8, 8' }
           }).addTo(map);
 
           map.fitBounds(currentDrawnRouteLayer.getBounds(), { padding: [60, 60] });
 
-          // 距離・時間表示
           const distKm = (route.distance / 1000).toFixed(2);
           const durMin = Math.round(route.duration / 60);
 
           document.getElementById('routeDistanceText').innerText = `${distKm} km`;
           document.getElementById('routeDurationText').innerText = `${durMin} 分`;
+          document.getElementById('routeDurationSpan').style.display = 'inline';
           document.getElementById('routeInfoPill').style.display = 'inline-flex';
 
           lastCalculatedGeoJson = {
@@ -813,9 +1035,10 @@
       const blob = new Blob([JSON.stringify(lastCalculatedGeoJson, null, 2)], { type: 'application/json' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = `route_${lastCalculatedGeoJson.properties.from_name}_to_${lastCalculatedGeoJson.properties.to_name}.geojson`;
+      const name = lastCalculatedGeoJson.properties.route_name || `route_${Date.now()}`;
+      a.download = `${name.replace(/[ ➔]/g, '_')}.geojson`;
       a.click();
-      alert("✅ 固定区間ルートをGeoJSONファイルとしてダウンロードしました！");
+      alert("✅ 固定区間ルートをGeoJSONファイルとして保存しました！");
     };
 
     // --- サンプルコース投入 ---
