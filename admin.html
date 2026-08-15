@@ -550,7 +550,7 @@
             const data = await res.json();
             if (data.routes && data.routes.length > 0) {
               const segLayer = L.geoJSON(data.routes[0].geometry, {
-                style: { color: '#a855f7', weight: 5, opacity: 0.9 }
+                style: { color: '#dc2626', weight: 6, opacity: 0.9 } // 固定ルートは赤色
               }).addTo(map);
               manualRouteSegments.push({ layer: segLayer, geometry: data.routes[0].geometry, distance: data.routes[0].distance, duration: data.routes[0].duration });
             } else {
@@ -573,7 +573,7 @@
         coordinates: [[p1.lng, p1.lat], [p2.lng, p2.lat]]
       };
       const segLayer = L.geoJSON(geojson, {
-        style: { color: '#a855f7', weight: 5, opacity: 0.9 }
+        style: { color: '#dc2626', weight: 6, opacity: 0.9 } // 固定ルートは赤色
       }).addTo(map);
       const d = map.distance([p1.lat, p1.lng], [p2.lat, p2.lng]);
       manualRouteSegments.push({ layer: segLayer, geometry: geojson, distance: d, duration: d / 8.33 }); // 約30km/h換算
@@ -991,7 +991,7 @@
           clearDrawnRoute();
 
           currentDrawnRouteLayer = L.geoJSON(route.geometry, {
-            style: { color: '#38bdf8', weight: 6, opacity: 0.9, dashArray: '8, 8' }
+            style: { color: '#2563eb', weight: 6, opacity: 0.9 } // 動的ルートナビは青色
           }).addTo(map);
 
           map.fitBounds(currentDrawnRouteLayer.getBounds(), { padding: [60, 60] });

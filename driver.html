@@ -612,7 +612,7 @@
         if (data.routes && data.routes.length > 0) {
           if (currentRouteLayer) map.removeLayer(currentRouteLayer);
           currentRouteLayer = L.geoJSON(data.routes[0].geometry, {
-            style: { color: '#38bdf8', weight: 6, opacity: 0.9, dashArray: '6, 8' }
+            style: { color: '#2563eb', weight: 6, opacity: 0.9 } // 動的ルートナビは青色
           }).addTo(map);
           map.fitBounds(currentRouteLayer.getBounds(), { padding: [80, 80] });
         }
