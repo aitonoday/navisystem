@@ -207,32 +207,29 @@
       100% { transform: scale(1.02); filter: brightness(1.15); }
     }
 
-    /* 2択選択モーダル（画面最上部に大きく表示） */
+    /* 2択選択モーダル（画面最上部にフローティング表示、背後の地図は常に見える） */
     #select-next-modal {
       position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(15, 23, 42, 0.85);
-      backdrop-filter: blur(8px);
-      z-index: 2000;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      z-index: 1500;
       display: none;
-      flex-direction: column;
-      justify-content: flex-start;
-      padding: 12px;
+      pointer-events: none;
       animation: fadeIn 0.2s ease-out;
     }
     @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
+      from { opacity: 0; transform: translateY(-8px); }
+      to { opacity: 1; transform: translateY(0); }
     }
     .modal-content-card {
-      background: #1e293b;
+      pointer-events: auto;
+      background: rgba(30, 41, 59, 0.96);
       border: 2px solid #38bdf8;
+      backdrop-filter: blur(12px);
       border-radius: 16px;
-      padding: 16px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.7);
+      padding: 14px 16px;
+      box-shadow: 0 10px 32px rgba(0,0,0,0.6);
     }
     .modal-headline {
       font-size: 12px;
@@ -751,6 +748,7 @@
         map = L.map('map', { zoomControl: false }).setView([34.685, 135.805], 16);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           maxZoom: 19,
+          subdomains: ['a', 'b', 'c'],
           attribution: '© OpenStreetMap'
         }).addTo(map);
 
@@ -761,7 +759,10 @@
           shouldCenterOnUser = false;
         });
       }
-      setTimeout(() => map.invalidateSize(), 200);
+      // スマホ画面切り替え時のレンダリングを多重保証
+      setTimeout(() => map.invalidateSize(), 50);
+      setTimeout(() => map.invalidateSize(), 250);
+      setTimeout(() => map.invalidateSize(), 600);
     }
 
     // 📍 現在地を中心にするボタン
