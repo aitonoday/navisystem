@@ -991,7 +991,7 @@
           clearDrawnRoute();
 
           currentDrawnRouteLayer = L.geoJSON(route.geometry, {
-            style: { color: '#2563eb', weight: 6, opacity: 0.9 } // 動的ルートナビは青色
+            style: { color: '#1d4ed8', weight: 7, opacity: 0.95 } // 濃い青色
           }).addTo(map);
 
           map.fitBounds(currentDrawnRouteLayer.getBounds(), { padding: [60, 60] });
