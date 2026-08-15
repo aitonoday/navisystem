@@ -3,7 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NaviSystem - 配達コース管理システム (PC管理画面)</title>
+  <title>Lively Navi - 配達コース管理システム (PC管理画面)</title>
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800;900&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
   <!-- Firebase SDK (v9 compat) -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -17,122 +23,155 @@
       display: flex;
       flex-direction: column;
       height: 100vh;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-      background: #0f172a;
+      font-family: 'Plus Jakarta Sans', 'Noto Sans JP', -apple-system, sans-serif;
+      background: #090d16;
       color: #f1f5f9;
+      overflow: hidden;
     }
+
+    /* ヘッダー */
     #header {
-      background: #1e293b;
-      padding: 12px 24px;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      padding: 10px 24px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      border-bottom: 1px solid #334155;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      z-index: 1000;
+      height: 58px;
     }
-    .header-logo {
-      font-size: 18px;
-      font-weight: bold;
+    .header-logo-wrap {
       display: flex;
       align-items: center;
-      gap: 10px;
-      color: #38bdf8;
+      gap: 12px;
+    }
+    .logo-badge {
+      background: #ffffff;
+      padding: 4px 12px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
     }
     .nav-links {
       display: flex;
-      gap: 12px;
+      gap: 10px;
       align-items: center;
     }
+
+    /* 共通モダンボタン */
     .btn {
       padding: 8px 16px;
       border: none;
-      border-radius: 6px;
-      font-weight: 600;
+      border-radius: 10px;
+      font-weight: 700;
       cursor: pointer;
       font-size: 13px;
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      transition: all 0.2s;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
       text-decoration: none;
     }
-    .btn-blue { background: #2563eb; color: #fff; }
-    .btn-blue:hover { background: #1d4ed8; }
-    .btn-green { background: #16a34a; color: #fff; }
-    .btn-green:hover { background: #15803d; }
-    .btn-amber { background: #d97706; color: #fff; }
-    .btn-amber:hover { background: #b45309; }
-    .btn-purple { background: #9333ea; color: #fff; }
-    .btn-purple:hover { background: #7e22ce; }
-    .btn-slate { background: #334155; color: #f8fafc; }
-    .btn-slate:hover { background: #475569; }
-    .btn-red { background: #dc2626; color: #fff; }
-    .btn-red:hover { background: #b91c1c; }
+    .btn-blue {
+      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+    }
+    .btn-blue:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(37, 99, 235, 0.45); }
+    .btn-green {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+    }
+    .btn-green:hover { transform: translateY(-1px); }
+    .btn-purple {
+      background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(139, 92, 246, 0.35);
+    }
+    .btn-purple:hover { transform: translateY(-1px); }
+    .btn-slate {
+      background: rgba(30, 41, 59, 0.8);
+      color: #f1f5f9;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .btn-slate:hover { background: rgba(51, 65, 85, 0.9); border-color: rgba(255,255,255,0.2); }
+    .btn-red {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      color: #f87171;
+    }
+    .btn-red:hover { background: #ef4444; color:#fff; }
 
+    /* メインコンテナ */
     #container {
       display: flex;
       flex: 1;
-      overflow: hidden;
       position: relative;
+      height: calc(100vh - 58px);
     }
 
-    /* 左パネル：コース管理 & CSV取込 */
+    /* 左パネル（サイドバー） */
     #left-panel {
       width: 420px;
-      background: #1e293b;
-      border-right: 1px solid #334155;
+      background: rgba(15, 23, 42, 0.9);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-right: 1px solid rgba(255, 255, 255, 0.08);
       display: flex;
       flex-direction: column;
-      z-index: 10;
+      padding: 18px;
+      overflow-y: auto;
+      z-index: 500;
     }
+
+    /* ピル型タブ */
     .panel-tabs {
       display: flex;
-      border-bottom: 1px solid #334155;
-      background: #0f172a;
+      background: rgba(0, 0, 0, 0.3);
+      padding: 4px;
+      border-radius: 12px;
+      margin-bottom: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
     }
     .tab-btn {
       flex: 1;
-      padding: 12px;
-      text-align: center;
+      padding: 8px;
       background: transparent;
       border: none;
       color: #94a3b8;
-      font-weight: 600;
       font-size: 13px;
+      font-weight: 700;
+      border-radius: 8px;
       cursor: pointer;
-      border-bottom: 2px solid transparent;
       transition: all 0.2s;
     }
     .tab-btn.active {
-      color: #38bdf8;
-      border-bottom-color: #38bdf8;
       background: #1e293b;
+      color: #38bdf8;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
     }
 
-    .tab-content {
-      flex: 1;
-      overflow-y: auto;
-      padding: 16px;
-      display: none;
-    }
-    .tab-content.active {
-      display: flex;
-      flex-direction: column;
-    }
+    .tab-content { display: none; flex-direction: column; flex: 1; }
+    .tab-content.active { display: flex; }
 
-    /* ドロップエリア */
+    /* CSVドロップゾーン */
     .drop-zone {
-      border: 2px dashed #475569;
-      border-radius: 8px;
-      padding: 24px;
+      border: 2px dashed rgba(56, 189, 248, 0.4);
+      border-radius: 16px;
+      padding: 24px 16px;
       text-align: center;
-      background: #0f172a;
+      background: rgba(30, 41, 59, 0.4);
       cursor: pointer;
       transition: all 0.2s;
       margin-bottom: 16px;
     }
-    .drop-zone:hover, .drop-zone.dragover {
+    .drop-zone:hover {
       border-color: #38bdf8;
-      background: #1e293b;
+      background: rgba(56, 189, 248, 0.08);
     }
 
     .form-group {
@@ -142,35 +181,42 @@
       display: block;
       font-size: 12px;
       color: #94a3b8;
+      font-weight: 700;
       margin-bottom: 6px;
-      font-weight: 600;
     }
     .form-group input, .form-group select {
       width: 100%;
-      padding: 8px 12px;
-      border-radius: 6px;
-      border: 1px solid #475569;
-      background: #0f172a;
+      padding: 10px 12px;
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
       color: #f8fafc;
       font-size: 13px;
+    }
+    .form-group input:focus, .form-group select:focus {
+      outline: none;
+      border-color: #38bdf8;
+      box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
     }
 
     /* コースカード */
     .course-card {
-      background: #0f172a;
-      border: 1px solid #334155;
-      border-radius: 8px;
+      background: rgba(30, 41, 59, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
       padding: 14px;
       margin-bottom: 12px;
-      transition: all 0.2s;
       cursor: pointer;
+      transition: all 0.2s;
     }
     .course-card:hover {
-      border-color: #38bdf8;
+      border-color: rgba(56, 189, 248, 0.4);
+      background: rgba(30, 41, 59, 0.9);
+      transform: translateY(-1px);
     }
     .course-card.selected {
       border-color: #38bdf8;
-      background: #172554;
+      background: rgba(56, 189, 248, 0.08);
     }
     .course-header {
       display: flex;
@@ -179,142 +225,111 @@
       margin-bottom: 6px;
     }
     .course-title {
-      font-weight: bold;
       font-size: 14px;
+      font-weight: 800;
       color: #f8fafc;
     }
     .course-meta {
+      display: flex;
+      justify-content: space-between;
       font-size: 12px;
       color: #94a3b8;
-      display: flex;
-      gap: 12px;
+      margin-bottom: 8px;
     }
     .progress-bar-bg {
-      background: #334155;
+      background: rgba(0, 0, 0, 0.3);
       height: 6px;
       border-radius: 3px;
-      margin-top: 8px;
       overflow: hidden;
+      margin-bottom: 8px;
     }
     .progress-bar-fill {
-      background: #16a34a;
+      background: linear-gradient(90deg, #38bdf8 0%, #10b981 100%);
       height: 100%;
-      width: 0%;
+      border-radius: 3px;
       transition: width 0.3s;
     }
 
-    /* 配達リスト */
+    /* 配送先アイテム一覧 */
     .delivery-item {
-      background: #0f172a;
-      border: 1px solid #334155;
-      border-radius: 6px;
-      padding: 8px 12px;
-      margin-bottom: 6px;
+      background: rgba(30, 41, 59, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 10px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
       font-size: 12px;
     }
 
-    /* ルートツールバー（地図上フローティング） */
+    /* 右マップ */
+    #map {
+      flex: 1;
+      height: 100%;
+      background: #090d16;
+    }
+
+    /* ルートツールバー (上部フローティングアイランド) */
     #route-planner-bar {
       position: absolute;
-      top: 16px;
-      left: 436px;
-      right: 16px;
-      background: rgba(15, 23, 42, 0.95);
-      border: 1px solid #334155;
-      backdrop-filter: blur(8px);
-      border-radius: 12px;
-      padding: 10px 16px;
+      top: 14px;
+      left: 440px;
+      right: 20px;
       z-index: 1000;
+      background: rgba(15, 23, 42, 0.92);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-radius: 14px;
+      padding: 10px 16px;
       display: flex;
       align-items: center;
       gap: 12px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
-      flex-wrap: wrap;
+      box-shadow: 0 10px 28px rgba(0,0,0,0.5);
     }
     .mode-switch-btn {
-      padding: 6px 12px;
-      border-radius: 6px;
-      font-size: 12px;
-      font-weight: bold;
-      border: 1px solid #475569;
-      background: #1e293b;
+      padding: 6px 14px;
+      border-radius: 8px;
+      border: none;
+      background: transparent;
       color: #94a3b8;
+      font-weight: 700;
+      font-size: 12px;
       cursor: pointer;
       transition: all 0.2s;
     }
     .mode-switch-btn.active {
       background: #2563eb;
       color: #fff;
-      border-color: #2563eb;
-    }
-
-    .route-select-item {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 12px;
-      flex: 1;
-      min-width: 180px;
-    }
-    .route-select-item select {
-      flex: 1;
-      padding: 6px 8px;
-      background: #1e293b;
-      border: 1px solid #475569;
-      color: #f8fafc;
-      border-radius: 6px;
-      font-size: 12px;
-    }
-
-    #routeInfoPill {
-      display: none;
-      align-items: center;
-      gap: 10px;
-      background: #1e293b;
-      padding: 4px 12px;
-      border-radius: 20px;
-      border: 1px solid #38bdf8;
-      font-size: 12px;
-      color: #38bdf8;
-      font-weight: bold;
     }
 
     /* 手動描画ガイドバー */
     #draw-guide-bar {
       position: absolute;
-      bottom: 24px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(15, 23, 42, 0.95);
-      border: 2px solid #a855f7;
-      color: #fff;
-      padding: 10px 20px;
-      border-radius: 30px;
+      top: 74px;
+      left: 440px;
+      right: 20px;
       z-index: 1000;
+      background: rgba(147, 51, 234, 0.92);
+      backdrop-filter: blur(12px);
+      color: #fff;
+      border-radius: 12px;
+      padding: 8px 16px;
       display: none;
       align-items: center;
-      gap: 14px;
+      justify-content: space-between;
       font-size: 13px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
-    }
-
-    /* 右パネル：マップ */
-    #map {
-      flex: 1;
-      height: 100%;
-      background: #0b0f19;
-    }
-    .drawing-mode-cursor {
-      cursor: crosshair !important;
+      font-weight: 700;
+      box-shadow: 0 8px 24px rgba(147, 51, 234, 0.4);
     }
   </style>
 </head>
 <body>
 
   <div id="header">
-    <div class="header-logo" style="display:flex; align-items:center; gap:8px;">
-      <img src="logo.png" alt="Lively Navi" style="height: 32px; background: #fff; padding: 2px 8px; border-radius: 6px;">
-      <span style="font-size: 12px; font-weight: normal; color: #94a3b8;">PC管理画面</span>
+    <div class="header-logo-wrap">
+      <div class="logo-badge">
+        <img src="logo.png" alt="Lively Navi" style="height: 24px; display: block;">
+      </div>
+      <span style="font-size: 12px; font-weight: 700; color: #94a3b8;">PC 管理コンソール</span>
     </div>
     <div class="nav-links">
       <button class="btn btn-purple" onclick="openCloudConfigModal()">
@@ -323,30 +338,30 @@
       <a href="driver.html" target="_blank" class="btn btn-blue">
         📱 スマホドライバー画面を開く ↗
       </a>
-      <button id="btnExportAll" class="btn btn-slate" onclick="exportDataBackup()">💾 データ出力</button>
+      <button id="btnExportAll" class="btn btn-slate" onclick="exportDataBackup()">💾 バックアップ</button>
     </div>
   </div>
 
   <!-- クラウド連携設定モーダル -->
-  <div id="cloudConfigModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); z-index:9999; align-items:center; justify-content:center; backdrop-filter:blur(4px);">
-    <div style="background:#1e293b; border:1px solid #334155; border-radius:14px; padding:24px; max-width:520px; width:90%; box-shadow:0 12px 32px rgba(0,0,0,0.6);">
+  <div id="cloudConfigModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.75); z-index:9999; align-items:center; justify-content:center; backdrop-filter:blur(6px);">
+    <div style="background:rgba(15,23,42,0.95); border:1px solid rgba(255,255,255,0.1); border-radius:18px; padding:24px; max-width:520px; width:90%; box-shadow:0 16px 40px rgba(0,0,0,0.6);">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-        <b style="font-size:18px; color:#38bdf8;">☁️ Firebase クラウド連携設定</b>
+        <b style="font-size:18px; color:#38bdf8; font-weight:800;">☁️ Firebase クラウド連携設定</b>
         <button class="btn btn-slate" style="padding:2px 8px; font-size:12px;" onclick="closeCloudConfigModal()">✕</button>
       </div>
 
       <p style="font-size:12px; color:#cbd5e1; margin-bottom:14px; line-height:1.5;">
-        Firebase コンソールで取得した <code>firebaseConfig</code>（設定JSONまたはコード）をそのまま貼り付けて「保存」を押してください。<br>
+        Firebase コンソールで取得した <code>firebaseConfig</code>（設定JSONまたはコード）を貼り付けて「保存」を押してください。<br>
         <span style="color:#94a3b8;">※設定すると、PCとスマホ間でリアルタイム同期（現在地・走行ログ・コース配信）が有効になります。</span>
       </p>
 
       <div class="form-group" style="margin-bottom:14px;">
         <label style="font-size:12px; color:#94a3b8;">Firebase 設定コード (JavaScript / JSON)</label>
-        <textarea id="firebaseConfigInput" style="width:100%; height:160px; background:#0f172a; border:1px solid #475569; border-radius:8px; color:#38bdf8; padding:10px; font-family:monospace; font-size:12px;" placeholder='{\n  "apiKey": "AIzaSy...",\n  "databaseURL": "https://...",\n  "projectId": "lively-navi-..."\n}'></textarea>
+        <textarea id="firebaseConfigInput" style="width:100%; height:140px; background:#0f172a; border:1px solid #475569; border-radius:10px; color:#38bdf8; padding:10px; font-family:monospace; font-size:12px;" placeholder='{\n  "apiKey": "AIzaSy...",\n  "databaseURL": "https://...",\n  "projectId": "lively-navi-..."\n}'></textarea>
       </div>
 
       <div style="display:flex; justify-content:space-between; align-items:center;">
-        <div id="cloudConnectionStatus" style="font-size:12px; color:#94a3b8;">
+        <div id="cloudConnectionStatus" style="font-size:12px; color:#94a3b8; font-weight:700;">
           状態: 未接続 (ローカルモード)
         </div>
         <div style="display:flex; gap:8px;">
@@ -361,7 +376,7 @@
     <!-- ルートツールバー -->
     <div id="route-planner-bar">
       <!-- モード切り替え -->
-      <div style="display:flex; gap:6px; background:#0f172a; padding:3px; border-radius:8px; border:1px solid #334155;">
+      <div style="display:flex; gap:4px; background:rgba(0,0,0,0.3); padding:3px; border-radius:10px; border:1px solid rgba(255,255,255,0.05);">
         <button id="modeAutoBtn" class="mode-switch-btn active" onclick="switchRouteMode('auto')">
           🚩 A➔B 自動探索
         </button>
@@ -371,46 +386,42 @@
       </div>
 
       <!-- A➔B 自動探索コントロール -->
-      <div id="autoControls" style="display:flex; align-items:center; gap:10px; flex:1; flex-wrap:wrap;">
-        <div class="route-select-item">
-          <span>🚩 <b>A (出発)</b>:</span>
-          <select id="routeFromSelect"><option value="">-- ピンまたはリストから選択 --</option></select>
-        </div>
-        <div class="route-select-item">
-          <span>🏁 <b>B (到着)</b>:</span>
-          <select id="routeToSelect"><option value="">-- ピンまたはリストから選択 --</option></select>
-        </div>
+      <div id="autoRouteControls" style="display:flex; align-items:center; gap:8px; flex:1;">
+        <select id="startPointSelect" style="flex:1; padding:6px 10px; background:#0f172a; border:1px solid rgba(255,255,255,0.1); border-radius:8px; color:#f8fafc; font-size:12px;">
+          <option value="">出発地点 (A) を選択</option>
+        </select>
+        <span style="color:#38bdf8; font-weight:bold;">➔</span>
+        <select id="endPointSelect" style="flex:1; padding:6px 10px; background:#0f172a; border:1px solid rgba(255,255,255,0.1); border-radius:8px; color:#f8fafc; font-size:12px;">
+          <option value="">到着地点 (B) を選択</option>
+        </select>
         <button class="btn btn-blue" style="padding:6px 12px; font-size:12px;" onclick="calculateAndDrawRoute()">
-          🚀 ルート計算
-        </button>
-        <button class="btn btn-slate" style="padding:6px 10px; font-size:12px;" onclick="clearDrawnRoute()">
-          ✕ 解除
+          🚀 ルート探索
         </button>
       </div>
 
       <!-- 手動描画コントロール -->
-      <div id="manualControls" style="display:none; align-items:center; gap:10px; flex:1; flex-wrap:wrap;">
-        <div style="display:flex; align-items:center; gap:6px; font-size:12px;">
-          <span>吸着:</span>
-          <select id="manualSnapType" style="padding:4px 8px; background:#1e293b; color:#fff; border:1px solid #475569; border-radius:4px;">
-            <option value="snap">🛣️ 道路スナップ（推奨）</option>
-            <option value="straight">📏 直線フリー</option>
-          </select>
-        </div>
-        <button id="btnUndoPoint" class="btn btn-slate" style="padding:6px 10px; font-size:12px;" onclick="undoLastManualPoint()">
-          ↩ 1つ戻す
+      <div id="manualRouteControls" style="display:none; align-items:center; gap:8px; flex:1;">
+        <select id="manualSnapType" style="padding:6px 10px; background:#0f172a; border:1px solid rgba(255,255,255,0.1); border-radius:8px; color:#f8fafc; font-size:12px;">
+          <option value="snap">🚗 道路に自動スナップ</option>
+          <option value="straight">📏 直線で結ぶ (裏道・路地)</option>
+        </select>
+        <button class="btn btn-purple" style="padding:6px 12px; font-size:12px;" onclick="startManualDrawing()">
+          ✏️ 描画開始
+        </button>
+        <button class="btn btn-slate" style="padding:6px 10px; font-size:12px;" onclick="undoManualPoint()">
+          ↩ 1点戻す
         </button>
         <button class="btn btn-slate" style="padding:6px 10px; font-size:12px;" onclick="clearManualRoute()">
           🗑️ クリア
         </button>
       </div>
 
-      <!-- 結果情報ピル -->
-      <div id="routeInfoPill">
-        <span>📏 <span id="routeDistanceText">0 km</span></span>
-        <span id="routeDurationSpan">⏱️ <span id="routeDurationText">0 分</span></span>
-        <button class="btn btn-amber" style="padding:2px 8px; font-size:11px;" onclick="saveCurrentDrawnRouteAsGeoJson()">
-          💾 固定ルートとして保存
+      <!-- ルート情報・保存ピル -->
+      <div id="routeInfoPill" style="display:none; align-items:center; gap:8px; background:rgba(30,41,59,0.8); padding:4px 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.08); font-size:12px;">
+        <span>距離: <b id="routeDistanceText" style="color:#38bdf8;">-- km</b></span>
+        <span>所要: <b id="routeDurationText" style="color:#34d399;">-- 分</b></span>
+        <button class="btn btn-green" style="padding:4px 8px; font-size:11px;" onclick="saveCurrentDrawnRouteAsGeoJson()">
+          💾 GeoJSON保存
         </button>
       </div>
     </div>
@@ -418,7 +429,7 @@
     <!-- 手動描画中 ガイドバナー -->
     <div id="draw-guide-bar">
       <span>✏️ <b>地図上をクリック</b> してルートを描画中... (通過地点: <b id="manualPointCount">0</b> 点)</span>
-      <button class="btn btn-purple" style="padding:4px 12px; font-size:12px;" onclick="finishManualDrawing()">
+      <button class="btn btn-slate" style="padding:4px 12px; font-size:12px; background:#fff; color:#7c3aed;" onclick="finishManualDrawing()">
         ✅ 描画完了・確定
       </button>
     </div>
@@ -426,16 +437,16 @@
     <!-- 左パネル -->
     <div id="left-panel">
       <div class="panel-tabs">
-        <button class="tab-btn active" onclick="switchTab('import')">📂 CSV取込・新規コース</button>
-        <button class="tab-btn" onclick="switchTab('courses')">📋 保存済みコース一覧 (<span id="courseCount">0</span>)</button>
+        <button class="tab-btn active" onclick="switchTab('import')">📂 CSV取込・新規作成</button>
+        <button class="tab-btn" onclick="switchTab('courses')">📋 作成済みコース (<span id="courseCount">0</span>)</button>
       </div>
 
       <!-- タブ1: CSV取込 & コース作成 -->
       <div id="tab-import" class="tab-content active">
         <div class="drop-zone" id="dropZone" onclick="document.getElementById('csvInput').click()">
-          <div style="font-size: 32px; margin-bottom: 8px;">📂</div>
-          <b style="font-size: 14px;">CSVファイルをドラッグ＆ドロップ</b>
-          <div style="font-size: 12px; color: #94a3b8; margin-top: 4px;">またはクリックしてファイル選択 (Shift-JIS / UTF-8対応)</div>
+          <div style="font-size: 32px; margin-bottom: 6px;">📂</div>
+          <b style="font-size: 14px;">CSVファイルをドロップ</b>
+          <div style="font-size: 12px; color: #94a3b8; margin-top: 4px;">またはクリックして選択 (Shift-JIS / UTF-8)</div>
           <input type="file" id="csvInput" accept=".csv" style="display:none;">
         </div>
 
@@ -450,24 +461,24 @@
             <input type="text" id="driverMemoInput" placeholder="例: 担当: 山田 / ルート001">
           </div>
 
-          <div style="display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 12px; color: #94a3b8;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 12px; color: #94a3b8; font-weight:700;">
             <span>変換完了: <b id="geocodeSuccessCount" style="color:#38bdf8;">0</b> 件</span>
             <span>合計: <b id="geocodeTotalCount">0</b> 件</span>
           </div>
 
-          <button id="btnSaveCourse" class="btn btn-green" style="width: 100%; justify-content: center; padding: 10px;">
-            ✨ このコースを保存してドライバーに配信
+          <button id="btnSaveCourse" class="btn btn-green" style="width: 100%; justify-content: center; padding: 12px; font-size:14px;">
+            ✨ このコースを保存してクラウド配信
           </button>
         </div>
 
-        <div id="previewList" style="flex: 1; overflow-y: auto; margin-top: 16px;"></div>
+        <div id="previewList" style="flex: 1; overflow-y: auto; margin-top: 14px;"></div>
       </div>
 
       <!-- タブ2: 保存済みコース一覧 & 進捗モニター -->
       <div id="tab-courses" class="tab-content">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-          <span style="font-size:13px; color:#94a3b8;">作成済み配達コース</span>
-          <button class="btn btn-slate" style="padding:4px 8px; font-size:11px;" onclick="loadSampleCourses()">＋ サンプル便を追加</button>
+          <span style="font-size:13px; color:#94a3b8; font-weight:700;">作成済み配達コース</span>
+          <button class="btn btn-slate" style="padding:4px 8px; font-size:11px;" onclick="loadSampleCourses()">＋ サンプル投入</button>
         </div>
         <div id="courseList" style="flex: 1; overflow-y: auto;"></div>
       </div>
@@ -493,20 +504,19 @@
 
     // 手動描画用変数
     let routeMode = 'auto'; // 'auto' | 'manual'
-    let manualPoints = []; // [ { lat, lng } ]
+    let manualPoints = [];
     let manualPointMarkers = [];
-    let manualRouteSegments = []; // GeoJSON line layers
+    let manualRouteSegments = [];
+    let isManualDrawingActive = false;
 
     const STORAGE_KEY = 'navisystem_courses';
 
-    // --- ストレージ管理 ---
     function getSavedCourses() {
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
-        return raw ? JSON.parse(raw) : [];
-      } catch (e) {
-        return [];
-      }
+        if (raw) return JSON.parse(raw);
+      } catch (e) {}
+      return [];
     }
 
     function saveCourses(courses) {
@@ -514,81 +524,75 @@
       renderCourseList();
     }
 
-    // --- タブ切り替え ---
-    function switchTab(tabId) {
+    function switchTab(tabName) {
       document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
       document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-
-      if (tabId === 'import') {
-        document.querySelectorAll('.tab-btn')[0].classList.add('active');
+      if (tabName === 'import') {
+        document.querySelector('.tab-btn:nth-child(1)').classList.add('active');
         document.getElementById('tab-import').classList.add('active');
-        activeLoadedItems = currentParsedItems;
-        updateRouteDropdowns();
       } else {
-        document.querySelectorAll('.tab-btn')[1].classList.add('active');
+        document.querySelector('.tab-btn:nth-child(2)').classList.add('active');
         document.getElementById('tab-courses').classList.add('active');
         renderCourseList();
       }
     }
 
-    // --- モード切り替え (自動A-B / 手動クリック) ---
+    // --- ルート描画モード切り替え ---
     window.switchRouteMode = function(mode) {
       routeMode = mode;
-      const mapEl = document.getElementById('map');
-
+      document.getElementById('modeAutoBtn').classList.toggle('active', mode === 'auto');
+      document.getElementById('modeManualBtn').classList.toggle('active', mode === 'manual');
+      document.getElementById('autoRouteControls').style.display = mode === 'auto' ? 'flex' : 'none';
+      document.getElementById('manualRouteControls').style.display = mode === 'manual' ? 'flex' : 'none';
       if (mode === 'auto') {
-        document.getElementById('modeAutoBtn').classList.add('active');
-        document.getElementById('modeManualBtn').classList.remove('active');
-        document.getElementById('autoControls').style.display = 'flex';
-        document.getElementById('manualControls').style.display = 'none';
-        document.getElementById('draw-guide-bar').style.display = 'none';
-        mapEl.classList.remove('drawing-mode-cursor');
-      } else {
-        document.getElementById('modeAutoBtn').classList.remove('active');
-        document.getElementById('modeManualBtn').classList.add('active');
-        document.getElementById('autoControls').style.display = 'none';
-        document.getElementById('manualControls').style.display = 'flex';
-        document.getElementById('draw-guide-bar').style.display = 'flex';
-        mapEl.classList.add('drawing-mode-cursor');
-        clearDrawnRoute();
+        stopManualDrawing();
       }
     };
 
-    // --- 地図クリックイベント (手動描画) ---
+    window.startManualDrawing = function() {
+      isManualDrawingActive = true;
+      document.getElementById('draw-guide-bar').style.display = 'flex';
+      map.getContainer().style.cursor = 'crosshair';
+    };
+
+    window.finishManualDrawing = function() {
+      stopManualDrawing();
+    };
+
+    function stopManualDrawing() {
+      isManualDrawingActive = false;
+      document.getElementById('draw-guide-bar').style.display = 'none';
+      map.getContainer().style.cursor = '';
+    }
+
     map.on('click', async (e) => {
-      if (routeMode !== 'manual') return;
-
-      const lat = e.latlng.lat;
-      const lng = e.latlng.lng;
+      if (!isManualDrawingActive) return;
+      const { lat, lng } = e.latlng;
       const pt = { lat, lng };
+      manualPoints.push(pt);
+      document.getElementById('manualPointCount').innerText = manualPoints.length;
 
-      // マーカー追加
-      const ptMarker = L.circleMarker([lat, lng], {
+      const m = L.circleMarker([lat, lng], {
         radius: 6,
-        fillColor: "#a855f7",
+        fillColor: "#9333ea",
         color: "#ffffff",
         weight: 2,
         fillOpacity: 1
       }).addTo(map);
-      manualPointMarkers.push(ptMarker);
+      manualPointMarkers.push(m);
 
-      manualPoints.push(pt);
-      document.getElementById('manualPointCount').innerText = manualPoints.length;
-
-      // 2点以上あればラインを描画
       if (manualPoints.length >= 2) {
         const prevPt = manualPoints[manualPoints.length - 2];
         const snapType = document.getElementById('manualSnapType').value;
 
         if (snapType === 'snap') {
-          // OSRM 道路スナップ探索
           const url = `https://router.project-osrm.org/route/v1/driving/${prevPt.lng},${prevPt.lat};${lng},${lat}?overview=full&geometries=geojson`;
           try {
             const res = await fetch(url);
             const data = await res.json();
             if (data.routes && data.routes.length > 0) {
               const segLayer = L.geoJSON(data.routes[0].geometry, {
-                style: { color: '#dc2626', weight: 6, opacity: 0.9 } // 固定ルートは赤色
+                style: { color: '#dc2626', weight: 6, opacity: 0.9 }
               }).addTo(map);
               manualRouteSegments.push({ layer: segLayer, geometry: data.routes[0].geometry, distance: data.routes[0].distance, duration: data.routes[0].duration });
             } else {
@@ -611,10 +615,10 @@
         coordinates: [[p1.lng, p1.lat], [p2.lng, p2.lat]]
       };
       const segLayer = L.geoJSON(geojson, {
-        style: { color: '#dc2626', weight: 6, opacity: 0.9 } // 固定ルートは赤色
+        style: { color: '#dc2626', weight: 6, opacity: 0.9 }
       }).addTo(map);
       const d = map.distance([p1.lat, p1.lng], [p2.lat, p2.lng]);
-      manualRouteSegments.push({ layer: segLayer, geometry: geojson, distance: d, duration: d / 8.33 }); // 約30km/h換算
+      manualRouteSegments.push({ layer: segLayer, geometry: geojson, distance: d, duration: d / 8.33 });
     }
 
     function updateManualRouteSummary() {
@@ -640,10 +644,9 @@
       lastCalculatedGeoJson = {
         type: "Feature",
         properties: {
-          route_name: `手動描画ルート_${new Date().toLocaleDateString()}`,
+          route_name: `手動描画ルート (${manualPoints.length}点)`,
           distance_km: parseFloat(distKm),
           duration_min: durMin,
-          points_count: manualPoints.length,
           created_at: new Date().toISOString()
         },
         geometry: {
@@ -653,99 +656,99 @@
       };
     }
 
-    window.undoLastManualPoint = function() {
+    window.undoManualPoint = function() {
       if (manualPoints.length === 0) return;
       manualPoints.pop();
+      document.getElementById('manualPointCount').innerText = manualPoints.length;
+
       const lastMarker = manualPointMarkers.pop();
       if (lastMarker) map.removeLayer(lastMarker);
 
-      if (manualRouteSegments.length > 0) {
-        const lastSeg = manualRouteSegments.pop();
-        if (lastSeg.layer) map.removeLayer(lastSeg.layer);
-      }
+      const lastSeg = manualRouteSegments.pop();
+      if (lastSeg && lastSeg.layer) map.removeLayer(lastSeg.layer);
 
-      document.getElementById('manualPointCount').innerText = manualPoints.length;
       updateManualRouteSummary();
     };
 
     window.clearManualRoute = function() {
-      manualPointMarkers.forEach(m => map.removeLayer(m));
-      manualRouteSegments.forEach(s => map.removeLayer(s.layer));
-      manualPointMarkers = [];
-      manualRouteSegments = [];
       manualPoints = [];
       document.getElementById('manualPointCount').innerText = '0';
+      manualPointMarkers.forEach(m => map.removeLayer(m));
+      manualPointMarkers = [];
+      manualRouteSegments.forEach(s => { if (s.layer) map.removeLayer(s.layer); });
+      manualRouteSegments = [];
       document.getElementById('routeInfoPill').style.display = 'none';
       lastCalculatedGeoJson = null;
     };
 
-    window.finishManualDrawing = function() {
-      if (manualPoints.length < 2) return alert("2地点以上クリックしてください。");
-      alert(`✅ ルート描画が完了しました！（全 ${manualPoints.length} 地点・距離 ${document.getElementById('routeDistanceText').innerText}）\n「💾 固定ルートとして保存」ボタンからGeoJSONとして保存できます。`);
-    };
-
-    // --- 国土地理院 API 住所変換 ---
-    async function geocodeAddress(address) {
-      if (!address) return null;
-      let cleanAddr = address.trim().replace(/[ー−―-]/g, '-');
-      let result = await fetchGsi(cleanAddr);
-      if (result) return result;
-
-      const simplifiedAddr = cleanAddr.replace(/[0-9０-９].*$/, '').trim();
-      if (simplifiedAddr && simplifiedAddr !== cleanAddr) {
-        result = await fetchGsi(simplifiedAddr);
-        if (result) return result;
-      }
-      return null;
-    }
-
-    async function fetchGsi(query) {
-      try {
-        const url = `https://msearch.gsi.go.jp/address-search/AddressSearch?q=${encodeURIComponent(query)}`;
-        const res = await fetch(url);
-        const data = await res.json();
-        if (data && data.length > 0) {
-          return { lat: data[0].geometry.coordinates[1], lng: data[0].geometry.coordinates[0] };
-        }
-      } catch (e) {
-        console.error("ジオコーディング通信エラー:", query, e);
-      }
-      return null;
-    }
-
-    // --- CSV処理 ---
+    // --- CSV ドラッグ＆ドロップ ---
     const dropZone = document.getElementById('dropZone');
     const csvInput = document.getElementById('csvInput');
 
-    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
-    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+    ['dragenter', 'dragover'].forEach(name => {
+      dropZone.addEventListener(name, (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+    });
+    ['dragleave', 'drop'].forEach(name => {
+      dropZone.addEventListener(name, (e) => { e.preventDefault(); dropZone.classList.remove('dragover'); });
+    });
+
     dropZone.addEventListener('drop', (e) => {
-      e.preventDefault();
-      dropZone.classList.remove('dragover');
-      if (e.dataTransfer.files.length > 0) handleCsvFile(e.dataTransfer.files[0]);
+      const files = e.dataTransfer.files;
+      if (files.length > 0) handleCSVFile(files[0]);
     });
+
     csvInput.addEventListener('change', (e) => {
-      if (e.target.files.length > 0) handleCsvFile(e.target.files[0]);
+      if (e.target.files.length > 0) handleCSVFile(e.target.files[0]);
     });
 
-    async function handleCsvFile(file) {
-      const buffer = await file.arrayBuffer();
-      let text = "";
+    function handleCSVFile(file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        let text = e.target.result;
+        try {
+          processCSVText(text);
+        } catch (err) {
+          const sjisReader = new FileReader();
+          sjisReader.onload = (e2) => processCSVText(e2.target.result);
+          sjisReader.readAsText(file, 'Shift_JIS');
+        }
+      };
+      reader.readAsText(file, 'UTF-8');
+    }
+
+    // 国土地理院・OSM ジオコーディング
+    async function geocodeAddress(address) {
+      const cleanAddr = address.replace(/[\s　]+/g, '').trim();
+      const gsiUrl = `https://msearch.gsi.go.jp/address-search/AddressSearch?q=${encodeURIComponent(cleanAddr)}`;
       try {
-        const utf8Decoder = new TextDecoder('utf-8', { fatal: true });
-        text = utf8Decoder.decode(buffer);
-      } catch (err) {
-        const sjisDecoder = new TextDecoder('shift-jis');
-        text = sjisDecoder.decode(buffer);
-      }
+        const res = await fetch(gsiUrl);
+        const data = await res.json();
+        if (data && data.length > 0) {
+          const coords = data[0].geometry.coordinates;
+          return { lat: coords[1], lng: coords[0] };
+        }
+      } catch (e) {}
 
+      const osmUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(cleanAddr)}&countrycodes=jp`;
+      try {
+        const res = await fetch(osmUrl);
+        const data = await res.json();
+        if (data && data.length > 0) {
+          return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+        }
+      } catch (e) {}
+
+      return null;
+    }
+
+    async function processCSVText(text) {
       const rows = parseCSV(text);
-      if (rows.length < 2) return alert("有効なCSVデータがありません。");
+      if (rows.length < 2) return alert("有効なCSVデータではありません。");
 
-      const header = rows[0].map(h => h.trim());
-      let orderIndex = header.findIndex(h => h.includes('順') || h.includes('No') || h.includes('no') || h.includes('Seq') || h.includes('seq') || h.includes('番号'));
-      let nameIndex = header.findIndex(h => h.includes('名前') || h.includes('氏名') || h.includes('顧客') || h.includes('宛先'));
-      let addrIndex = header.findIndex(h => h.includes('住所') || h.includes('お届け先') || h.includes('送付先') || h.includes('場所'));
+      const header = rows[0].map(h => (h || '').trim());
+      let nameIndex = header.findIndex(h => h.includes('名') || h.includes('顧客') || h.includes('宛先'));
+      let addrIndex = header.findIndex(h => h.includes('住所') || h.includes('番地') || h.includes('先'));
+      let orderIndex = header.findIndex(h => h.includes('順') || h.includes('No') || h.includes('番号'));
       let timeIndex = header.findIndex(h => h.includes('時間') || h.includes('指定'));
       let memoIndex = header.findIndex(h => h.includes('メモ') || h.includes('備考') || h.includes('注意'));
 
@@ -792,7 +795,6 @@
         if (coords) successCount++;
       }
 
-      // 配達順でソート
       currentParsedItems.sort((a, b) => a.order - b.order);
 
       document.getElementById('geocodeSuccessCount').innerText = successCount;
@@ -836,12 +838,12 @@
         const div = document.createElement('div');
         div.className = 'delivery-item';
         div.innerHTML = `
-          <div style="display:flex; justify-content:space-between;">
-            <b>#${item.id} ${item.name}</b>
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <b>#${item.order || item.id} ${item.name}</b>
             <span style="font-size:11px; color:#38bdf8;">${item.time || '指定なし'}</span>
           </div>
           <div style="color:#94a3b8; font-size:11px; margin-top:2px;">${item.address}</div>
-          ${item.memo ? `<div style="color:#f59e0b; font-size:10px; margin-top:2px;">📝 ${item.memo}</div>` : ''}
+          ${item.memo ? `<div style="color:#f59e0b; font-size:11px; margin-top:2px;">📝 ${item.memo}</div>` : ''}
         `;
         previewEl.appendChild(div);
       });
@@ -865,7 +867,6 @@
       courses.unshift(newCourse);
       saveCourses(courses);
 
-      // クラウドへ自動アップロード
       if (window.uploadCourseToCloud) {
         await uploadCourseToCloud(newCourse);
       }
@@ -897,13 +898,13 @@
           <div class="course-header">
             <span class="course-title">${course.name}</span>
             <div style="display:flex; gap:4px;">
-              <button class="btn btn-purple" style="padding:2px 6px; font-size:10px;" onclick="loadAndShowGpsTrackLog('${course.id}', event)">📍 走行ログ</button>
-              <button class="btn btn-red" style="padding:2px 6px; font-size:10px;" onclick="deleteCourse('${course.id}', event)">削除</button>
+              <button class="btn btn-purple" style="padding:3px 8px; font-size:11px;" onclick="loadAndShowGpsTrackLog('${course.id}', event)">📍 走行ログ</button>
+              <button class="btn btn-red" style="padding:3px 8px; font-size:11px;" onclick="deleteCourse('${course.id}', event)">削除</button>
             </div>
           </div>
           <div class="course-meta">
             <span>📦 ${totalCount} 件</span>
-            <span>✅ 完了: ${doneCount}件 (${percent}%)</span>
+            <span style="color:${percent === 100 ? '#4ade80' : '#38bdf8'}; font-weight:bold;">✅ ${doneCount}/${totalCount} (${percent}%)</span>
             <span>🕒 ${new Date(course.createdAt).toLocaleDateString()}</span>
           </div>
           <div class="progress-bar-bg">
@@ -923,7 +924,6 @@
       });
     }
 
-    // クラウドから走行ログを取得して地図上に描画
     let gpsLogPolyline = null;
     window.loadAndShowGpsTrackLog = async function(courseId, event) {
       if (event) event.stopPropagation();
@@ -961,111 +961,74 @@
       clearMap();
       if (!items || items.length === 0) return;
 
+      const group = [];
       items.forEach(item => {
         const marker = L.circleMarker([item.lat, item.lng], {
           radius: 9,
-          fillColor: item.isDone ? "#16a34a" : "#2563eb",
-          color: "#fff",
+          fillColor: item.isDone ? "#10b981" : "#2563eb",
+          color: "#ffffff",
           weight: 2,
-          fillOpacity: 0.9
+          fillOpacity: 1
         }).addTo(map);
 
         marker.bindPopup(`
-          <div style="min-width:180px; font-size:12px;">
-            <b style="font-size:13px;">#${item.id} ${item.name}</b><br>
+          <div style="font-size:12px; font-family:'Noto Sans JP',sans-serif;">
+            <b style="font-size:14px;">#${item.order || item.id} ${item.name} 様</b><br>
             <span style="color:#64748b;">${item.address}</span><br>
-            ${item.time ? `<span style="color:#2563eb;">🕒 ${item.time}</span><br>` : ''}
-            ${item.memo ? `<span style="color:#f59e0b;">📝 ${item.memo}</span>` : ''}
-            <div style="display:flex; gap:6px; margin-top:8px;">
-              <button class="btn btn-blue" style="flex:1; padding:4px 6px; font-size:11px;" onclick="setRoutePoint('from', ${item.id})">🚩 A(出発)</button>
-              <button class="btn btn-green" style="flex:1; padding:4px 6px; font-size:11px;" onclick="setRoutePoint('to', ${item.id})">🏁 B(到着)</button>
-            </div>
+            ${item.memo ? `<span style="color:#fbbf24;">📝 ${item.memo}</span>` : ''}
           </div>
         `);
 
         activeMarkers.push(marker);
+        group.push([item.lat, item.lng]);
       });
 
-      const group = new L.featureGroup(activeMarkers);
-      map.fitBounds(group.getBounds(), { padding: [40, 40] });
+      if (group.length > 0) {
+        map.fitBounds(group, { padding: [50, 50] });
+      }
     }
 
-    // --- 自動 A➔B ルート計算 ---
     function updateRouteDropdowns() {
-      const fromSel = document.getElementById('routeFromSelect');
-      const toSel = document.getElementById('routeToSelect');
-      
-      const prevFrom = fromSel.value;
-      const prevTo = toSel.value;
+      const selA = document.getElementById('startPointSelect');
+      const selB = document.getElementById('endPointSelect');
+      selA.innerHTML = '<option value="">出発地点 (A) を選択</option>';
+      selB.innerHTML = '<option value="">到着地点 (B) を選択</option>';
 
-      fromSel.innerHTML = '<option value="">-- 出発地を選択 (A) --</option>';
-      toSel.innerHTML = '<option value="">-- 目的地を選択 (B) --</option>';
-
-      activeLoadedItems.forEach(it => {
-        const label = `#${it.id} ${it.name} (${it.address.slice(0, 10)}...)`;
-        fromSel.add(new Option(label, it.id));
-        toSel.add(new Option(label, it.id));
+      activeLoadedItems.forEach(item => {
+        const label = `#${item.order || item.id} ${item.name} (${item.address.substring(0, 8)}...)`;
+        selA.innerHTML += `<option value="${item.id}">${label}</option>`;
+        selB.innerHTML += `<option value="${item.id}">${label}</option>`;
       });
-
-      if (prevFrom) fromSel.value = prevFrom;
-      if (prevTo) toSel.value = prevTo;
-
-      if (activeLoadedItems.length >= 2 && !fromSel.value && !toSel.value) {
-        fromSel.value = activeLoadedItems[0].id;
-        toSel.value = activeLoadedItems[1].id;
-      }
     }
-
-    window.setRoutePoint = function(type, id) {
-      switchRouteMode('auto');
-      if (type === 'from') {
-        document.getElementById('routeFromSelect').value = id;
-      } else {
-        document.getElementById('routeToSelect').value = id;
-      }
-      map.closePopup();
-
-      const fromId = document.getElementById('routeFromSelect').value;
-      const toId = document.getElementById('routeToSelect').value;
-      if (fromId && toId && fromId !== toId) {
-        calculateAndDrawRoute();
-      }
-    };
 
     window.calculateAndDrawRoute = async function() {
-      const fromId = parseInt(document.getElementById('routeFromSelect').value);
-      const toId = parseInt(document.getElementById('routeToSelect').value);
+      const idA = document.getElementById('startPointSelect').value;
+      const idB = document.getElementById('endPointSelect').value;
+      if (!idA || !idB) return alert("出発地点(A)と到着地点(B)の両方を選択してください。");
+      if (idA === idB) return alert("異なる地点を選択してください。");
 
-      if (!fromId || !toId) return alert("出発地(A)と目的地(B)の両方を選択してください。");
-      if (fromId === toId) return alert("出発地と目的地が同じです。異なる地点を選択してください。");
-
-      const itemA = activeLoadedItems.find(i => i.id === fromId);
-      const itemB = activeLoadedItems.find(i => i.id === toId);
-
-      if (!itemA || !itemB) return alert("指定された配達先が見つかりません。");
+      const itemA = activeLoadedItems.find(i => i.id == idA);
+      const itemB = activeLoadedItems.find(i => i.id == idB);
 
       const url = `https://router.project-osrm.org/route/v1/driving/${itemA.lng},${itemA.lat};${itemB.lng},${itemB.lat}?overview=full&geometries=geojson`;
-
       try {
         const res = await fetch(url);
         const data = await res.json();
-
         if (data.routes && data.routes.length > 0) {
           const route = data.routes[0];
           clearDrawnRoute();
 
           currentDrawnRouteLayer = L.geoJSON(route.geometry, {
-            style: { color: '#1d4ed8', weight: 7, opacity: 0.95 } // 濃い青色
+            style: { color: '#1d4ed8', weight: 7, opacity: 0.95 }
           }).addTo(map);
 
-          map.fitBounds(currentDrawnRouteLayer.getBounds(), { padding: [60, 60] });
+          map.fitBounds(currentDrawnRouteLayer.getBounds(), { padding: [50, 50] });
 
           const distKm = (route.distance / 1000).toFixed(2);
           const durMin = Math.round(route.duration / 60);
 
           document.getElementById('routeDistanceText').innerText = `${distKm} km`;
           document.getElementById('routeDurationText').innerText = `${durMin} 分`;
-          document.getElementById('routeDurationSpan').style.display = 'inline';
           document.getElementById('routeInfoPill').style.display = 'inline-flex';
 
           lastCalculatedGeoJson = {
@@ -1111,7 +1074,7 @@
       alert("✅ 固定区間ルートをGeoJSONファイルとして保存しました！");
     };
 
-    // --- サンプルコース投入 ---
+    // サンプル投入
     window.loadSampleCourses = function() {
       const sampleCourse = {
         id: 'sample_' + Date.now(),
@@ -1119,10 +1082,10 @@
         memo: '担当: テストドライバー',
         createdAt: new Date().toISOString(),
         items: [
-          { id: 1, name: "田中 太郎", address: "奈良県奈良市登大路町30", time: "午前中", memo: "置き配可（玄関前）", lat: 34.685062, lng: 135.832809, isDone: false },
-          { id: 2, name: "佐藤 次郎", address: "奈良県生駒市北新町10-38", time: "14:00-16:00", memo: "オートロック暗証1234", lat: 34.694481, lng: 135.697067, isDone: false },
-          { id: 3, name: "鈴木 三郎", address: "奈良県大和高田市大中100", time: "18:00-20:00", memo: "不在時宅配BOX", lat: 34.515060, lng: 135.737167, isDone: false },
-          { id: 4, name: "高橋 四郎", address: "奈良県奈良市三条栄町", time: "指定なし", memo: "道幅狭小注意", lat: 34.680706, lng: 135.808823, isDone: false }
+          { id: 1, order: 1, name: "田中 太郎", address: "奈良県奈良市登大路町30", time: "午前中", memo: "置き配可（玄関前）", lat: 34.685062, lng: 135.832809, isDone: false },
+          { id: 2, order: 2, name: "佐藤 次郎", address: "奈良県生駒市北新町10-38", time: "14:00-16:00", memo: "オートロック暗証1234", lat: 34.694481, lng: 135.697067, isDone: false },
+          { id: 3, order: 3, name: "鈴木 三郎", address: "奈良県大和高田市大中100", time: "18:00-20:00", memo: "不在時宅配BOX", lat: 34.515060, lng: 135.737167, isDone: false },
+          { id: 4, order: 4, name: "高橋 四郎", address: "奈良県奈良市三条栄町", time: "指定なし", memo: "道幅狭小注意", lat: 34.680706, lng: 135.808823, isDone: false }
         ]
       };
       const courses = getSavedCourses();
@@ -1130,7 +1093,7 @@
       saveCourses(courses);
     };
 
-    // --- Firebase クラウド連携設定 & リアルタイム同期 ---
+    // Firebase クラウド連携設定 & リアルタイム同期
     let cloudDriverMarkers = {};
 
     window.openCloudConfigModal = function() {
@@ -1163,7 +1126,6 @@
         if (raw.startsWith('{')) {
           configObj = JSON.parse(raw);
         } else {
-          // JS形式のオブジェクトからJSON抽出
           const jsonStr = raw.replace(/const\s+\w+\s*=\s*/, '').replace(/;\s*$/, '').replace(/(\w+):/g, '"$1":').replace(/'/g, '"');
           configObj = JSON.parse(jsonStr);
         }
@@ -1181,7 +1143,6 @@
       const config = getSavedFirebaseConfig();
       if (!config) return;
 
-      // 1. ドライバー現在地のリアルタイム監視
       subscribeDriverLocations((drivers) => {
         Object.keys(cloudDriverMarkers).forEach(k => map.removeLayer(cloudDriverMarkers[k]));
         cloudDriverMarkers = {};
@@ -1192,7 +1153,7 @@
             const carHtml = `
               <div style="position:relative; display:flex; align-items:center; justify-content:center;">
                 <div style="position:absolute; width:44px; height:44px; border-radius:50%; background:rgba(56, 189, 248, 0.4); animation:pulseAnim 1.8s infinite ease-out;"></div>
-                <div style="width:34px; height:34px; background:#1e293b; border:2px solid #38bdf8; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:18px; z-index:10; box-shadow:0 4px 10px rgba(0,0,0,0.5);">🚚</div>
+                <div style="width:36px; height:36px; background:#0f172a; border:2.5px solid #38bdf8; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:18px; z-index:10; box-shadow:0 4px 12px rgba(0,0,0,0.6);">🚚</div>
               </div>
             `;
             const carIcon = L.divIcon({ html: carHtml, className: 'driver-car-icon', iconSize: [36, 36], iconAnchor: [18, 18] });
@@ -1203,7 +1164,6 @@
         });
       });
 
-      // 2. クラウド上のコース一覧の自動同期
       subscribeCoursesFromCloud((cloudCourses) => {
         if (cloudCourses && cloudCourses.length > 0) {
           saveCourses(cloudCourses);
@@ -1212,7 +1172,6 @@
       });
     }
 
-    // 初期表示
     renderCourseList();
     initCloudSubscriptions();
   </script>
