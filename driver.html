@@ -415,6 +415,10 @@
 
   <!-- Leaflet JS (Cloudflare CDN) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+  <!-- Firebase SDK (v9 compat) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="firebase-sync.js"></script>
   <script>
     // --- Service Worker ---
     if ('serviceWorker' in navigator) {
@@ -852,6 +856,11 @@
         saveCourses(courses);
       }
 
+      // クラウドへ配達完了を同期
+      if (window.updateItemStatusToCloud && currentCourse) {
+        updateItemStatusToCloud(currentCourse.id, currentTargetItem.id, true);
+      }
+
       if (currentRouteLayer) {
         map.removeLayer(currentRouteLayer);
         currentRouteLayer = null;
@@ -916,7 +925,9 @@
       }
     };
 
-    // --- GPS追従 ---
+    // --- GPS追従 & クラウド自動送信 ---
+    let lastCloudUploadTime = 0;
+
     function startContinuousGpsTracking() {
       if (!navigator.geolocation) return;
       isGpsRecording = true;
@@ -933,6 +944,23 @@
         document.getElementById('gpsPointCount').innerText = recordedLogs.length;
 
         updateCarMarker(pt.lat, pt.lng);
+
+        // クラウドへ位置情報 & 走行ログを自動送信（3秒間隔）
+        const now = Date.now();
+        if (now - lastCloudUploadTime > 3000) {
+          lastCloudUploadTime = now;
+          if (window.updateDriverLocationToCloud) {
+            updateDriverLocationToCloud('driver_main', {
+              name: '担当ドライバー',
+              courseId: currentCourse ? currentCourse.id : null,
+              lat: pt.lat,
+              lng: pt.lng
+            });
+          }
+          if (window.appendGpsLogToCloud && currentCourse) {
+            appendGpsLogToCloud(currentCourse.id, pt);
+          }
+        }
       }, (err) => {
         console.warn("GPS error:", err);
       }, { enableHighAccuracy: true, maximumAge: 2000, timeout: 10000 });
@@ -943,11 +971,25 @@
       isGpsRecording = false;
     }
 
-    // 初期化
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', refreshCourses);
-    } else {
+    // 初期化 & クラウドコース購読
+    function initDriverApp() {
       refreshCourses();
+      if (window.subscribeCoursesFromCloud) {
+        subscribeCoursesFromCloud((cloudCourses) => {
+          if (cloudCourses && cloudCourses.length > 0) {
+            saveCourses(cloudCourses);
+            if (!currentCourse) {
+              refreshCourses();
+            }
+          }
+        });
+      }
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initDriverApp);
+    } else {
+      initDriverApp();
     }
   </script>
 </body>

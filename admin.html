@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>NaviSystem - 配達コース管理システム (PC管理画面)</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+  <!-- Firebase SDK (v9 compat) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="firebase-sync.js"></script>
   <style>
     * { box-sizing: border-box; }
     body {
@@ -313,10 +317,43 @@
       <span style="font-size: 12px; font-weight: normal; color: #94a3b8;">PC管理画面</span>
     </div>
     <div class="nav-links">
+      <button class="btn btn-purple" onclick="openCloudConfigModal()">
+        ☁️ クラウド連携設定
+      </button>
       <a href="driver.html" target="_blank" class="btn btn-blue">
         📱 スマホドライバー画面を開く ↗
       </a>
       <button id="btnExportAll" class="btn btn-slate" onclick="exportDataBackup()">💾 データ出力</button>
+    </div>
+  </div>
+
+  <!-- クラウド連携設定モーダル -->
+  <div id="cloudConfigModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); z-index:9999; align-items:center; justify-content:center; backdrop-filter:blur(4px);">
+    <div style="background:#1e293b; border:1px solid #334155; border-radius:14px; padding:24px; max-width:520px; width:90%; box-shadow:0 12px 32px rgba(0,0,0,0.6);">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <b style="font-size:18px; color:#38bdf8;">☁️ Firebase クラウド連携設定</b>
+        <button class="btn btn-slate" style="padding:2px 8px; font-size:12px;" onclick="closeCloudConfigModal()">✕</button>
+      </div>
+
+      <p style="font-size:12px; color:#cbd5e1; margin-bottom:14px; line-height:1.5;">
+        Firebase コンソールで取得した <code>firebaseConfig</code>（設定JSONまたはコード）をそのまま貼り付けて「保存」を押してください。<br>
+        <span style="color:#94a3b8;">※設定すると、PCとスマホ間でリアルタイム同期（現在地・走行ログ・コース配信）が有効になります。</span>
+      </p>
+
+      <div class="form-group" style="margin-bottom:14px;">
+        <label style="font-size:12px; color:#94a3b8;">Firebase 設定コード (JavaScript / JSON)</label>
+        <textarea id="firebaseConfigInput" style="width:100%; height:160px; background:#0f172a; border:1px solid #475569; border-radius:8px; color:#38bdf8; padding:10px; font-family:monospace; font-size:12px;" placeholder='{\n  "apiKey": "AIzaSy...",\n  "databaseURL": "https://...",\n  "projectId": "lively-navi-..."\n}'></textarea>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div id="cloudConnectionStatus" style="font-size:12px; color:#94a3b8;">
+          状態: 未接続 (ローカルモード)
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-slate" onclick="closeCloudConfigModal()">閉じる</button>
+          <button class="btn btn-green" onclick="saveAndConnectFirebase()">💾 保存して接続</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1067,8 +1104,91 @@
       saveCourses(courses);
     };
 
+    // --- Firebase クラウド連携設定 & リアルタイム同期 ---
+    let cloudDriverMarkers = {};
+
+    window.openCloudConfigModal = function() {
+      const saved = getSavedFirebaseConfig();
+      if (saved) {
+        document.getElementById('firebaseConfigInput').value = JSON.stringify(saved, null, 2);
+        document.getElementById('cloudConnectionStatus').innerHTML = '<span style="color:#4ade80;">🟢 接続設定済み (' + (saved.projectId || '') + ')</span>';
+      } else {
+        document.getElementById('firebaseConfigInput').value = '';
+        document.getElementById('cloudConnectionStatus').innerHTML = '<span style="color:#94a3b8;">⚪ 未接続 (ローカルモード)</span>';
+      }
+      document.getElementById('cloudConfigModal').style.display = 'flex';
+    };
+
+    window.closeCloudConfigModal = function() {
+      document.getElementById('cloudConfigModal').style.display = 'none';
+    };
+
+    window.saveAndConnectFirebase = function() {
+      const raw = document.getElementById('firebaseConfigInput').value.trim();
+      if (!raw) {
+        saveFirebaseConfig(null);
+        alert("クラウド設定を解除し、ローカルモードに戻しました。");
+        closeCloudConfigModal();
+        return;
+      }
+
+      try {
+        let configObj = null;
+        if (raw.startsWith('{')) {
+          configObj = JSON.parse(raw);
+        } else {
+          // JS形式のオブジェクトからJSON抽出
+          const jsonStr = raw.replace(/const\s+\w+\s*=\s*/, '').replace(/;\s*$/, '').replace(/(\w+):/g, '"$1":').replace(/'/g, '"');
+          configObj = JSON.parse(jsonStr);
+        }
+
+        saveFirebaseConfig(configObj);
+        alert("✅ Firebase クラウド連携を設定しました！リアルタイム同期を開始します。");
+        closeCloudConfigModal();
+        initCloudSubscriptions();
+      } catch (err) {
+        alert("設定コードの解析に失敗しました。正しいJSONまたは設定オブジェクトを貼り付けてください。\nエラー: " + err.message);
+      }
+    };
+
+    function initCloudSubscriptions() {
+      const config = getSavedFirebaseConfig();
+      if (!config) return;
+
+      // 1. ドライバー現在地のリアルタイム監視
+      subscribeDriverLocations((drivers) => {
+        Object.keys(cloudDriverMarkers).forEach(k => map.removeLayer(cloudDriverMarkers[k]));
+        cloudDriverMarkers = {};
+
+        Object.keys(drivers).forEach(driverId => {
+          const d = drivers[driverId];
+          if (d && d.lat && d.lng) {
+            const carHtml = `
+              <div style="position:relative; display:flex; align-items:center; justify-content:center;">
+                <div style="position:absolute; width:44px; height:44px; border-radius:50%; background:rgba(56, 189, 248, 0.4); animation:pulseAnim 1.8s infinite ease-out;"></div>
+                <div style="width:34px; height:34px; background:#1e293b; border:2px solid #38bdf8; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:18px; z-index:10; box-shadow:0 4px 10px rgba(0,0,0,0.5);">🚚</div>
+              </div>
+            `;
+            const carIcon = L.divIcon({ html: carHtml, className: 'driver-car-icon', iconSize: [36, 36], iconAnchor: [18, 18] });
+            const m = L.marker([d.lat, d.lng], { icon: carIcon, zIndexOffset: 2000 }).addTo(map);
+            m.bindPopup(`<b>🚚 ${d.name || driverId}</b><br>最終更新: ${new Date(d.updatedAt).toLocaleTimeString()}`);
+            cloudDriverMarkers[driverId] = m;
+          }
+        });
+      });
+
+      // 2. クラウド上のコース一覧の自動同期
+      subscribeCoursesFromCloud((cloudCourses) => {
+        if (cloudCourses && cloudCourses.length > 0) {
+          saveCourses(cloudCourses);
+          renderCourseList();
+        }
+      });
+    }
+
     // 初期表示
     renderCourseList();
+    initCloudSubscriptions();
   </script>
 </body>
 </html>
