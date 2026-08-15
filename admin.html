@@ -771,7 +771,23 @@
         const memo = memoIndex !== -1 ? row[memoIndex] : "";
         if (!address) continue;
 
-        const coords = await geocodeAddress(address);
+        let coords = null;
+        let isFromMaster = false;
+
+        // 1. 地点補正マスターを優先検索
+        if (window.findCorrectedCoords) {
+          const master = findCorrectedCoords(address, name);
+          if (master) {
+            coords = { lat: master.lat, lng: master.lng };
+            isFromMaster = true;
+          }
+        }
+
+        // 2. マスターに無ければジオコーディング
+        if (!coords) {
+          coords = await geocodeAddress(address);
+        }
+
         const item = {
           id: i,
           order: isNaN(orderVal) ? i : orderVal,
@@ -782,7 +798,8 @@
           lat: coords ? coords.lat : 34.685 + (Math.random() - 0.5) * 0.05,
           lng: coords ? coords.lng : 135.805 + (Math.random() - 0.5) * 0.05,
           isDone: false,
-          hasValidCoords: !!coords
+          hasValidCoords: !!coords,
+          isCorrectedMaster: isFromMaster
         };
 
         currentParsedItems.push(item);
@@ -957,19 +974,63 @@
 
       const group = [];
       items.forEach(item => {
-        const marker = L.circleMarker([item.lat, item.lng], {
-          radius: 9,
-          fillColor: item.isDone ? "#10b981" : "#0d9488",
-          color: "#ffffff",
-          weight: 2,
-          fillOpacity: 1
+        const pinColor = item.isDone ? "#10b981" : (item.isCorrectedMaster ? "#f59e0b" : "#0d9488");
+        const pinHtml = `
+          <div style="position:relative; display:flex; flex-direction:column; align-items:center; cursor:grab;">
+            <div style="background:${pinColor}; color:#fff; font-size:11px; font-weight:800; padding:2px 7px; border-radius:10px; border:2px solid #fff; box-shadow:0 3px 8px rgba(0,0,0,0.25); white-space:nowrap;">
+              #${item.order || item.id} ${item.name}
+            </div>
+            <div style="width:0; height:0; border-left:5px solid transparent; border-right:5px solid transparent; border-top:6px solid ${pinColor}; margin-top:-1px;"></div>
+          </div>
+        `;
+
+        const icon = L.divIcon({
+          html: pinHtml,
+          className: 'custom-delivery-pin',
+          iconSize: [80, 30],
+          iconAnchor: [40, 28]
+        });
+
+        const marker = L.marker([item.lat, item.lng], {
+          icon: icon,
+          draggable: true
         }).addTo(map);
 
+        // ドラッグ移動で地点マスターに自動保存
+        marker.on('dragend', async function(e) {
+          const newPos = e.target.getLatLng();
+          item.lat = newPos.lat;
+          item.lng = newPos.lng;
+          item.isCorrectedMaster = true;
+
+          // 1. 地点補正マスターに保存（次回以降のCSVや他コースに自動反映）
+          if (window.saveLocationCorrection) {
+            await saveLocationCorrection(item.address, item.name, newPos.lat, newPos.lng);
+          }
+
+          // 2. 現在の保存済みコースも更新
+          const courses = getSavedCourses();
+          courses.forEach(c => {
+            const match = c.items.find(i => (i.address === item.address && i.name === item.name) || i.id === item.id);
+            if (match) {
+              match.lat = newPos.lat;
+              match.lng = newPos.lng;
+              match.isCorrectedMaster = true;
+            }
+          });
+          saveCourses(courses);
+
+          alert(`🎯「${item.name} 様」のピン位置を修正し、【地点マスター】に登録しました！\n次回以降のCSV取込や他の配送でも、この正確な位置が自動適用されます。`);
+        });
+
         marker.bindPopup(`
-          <div style="font-size:12px; font-family:'Noto Sans JP',sans-serif;">
+          <div style="font-size:12px; font-family:'Noto Sans JP',sans-serif; min-width:180px;">
             <b style="font-size:14px; color:#0f172a;">#${item.order || item.id} ${item.name} 様</b><br>
             <span style="color:#64748b;">${item.address}</span><br>
-            ${item.memo ? `<span style="color:#d97706; font-weight:600;">📝 ${item.memo}</span>` : ''}
+            ${item.memo ? `<span style="color:#d97706; font-weight:600;">📝 ${item.memo}</span><br>` : ''}
+            <div style="margin-top:6px; font-size:11px; color:#0d9488; font-weight:700;">
+              💡 ピンをドラッグして位置を直接修正できます
+            </div>
           </div>
         `);
 

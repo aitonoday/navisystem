@@ -1,8 +1,7 @@
 /**
- * Lively Navi - Firebase Realtime Database 同期モジュール (高堅牢版)
+ * Lively Navi - Firebase Realtime Database 同期モジュール (地点マスター対応版)
  */
 
-// プロジェクト設定 (シンガポール & 米国両対応)
 const DEFAULT_FIREBASE_CONFIG = {
   apiKey: "AIzaSyBk4ap0jdbWdy83Titr03rvOd0PsT597Ro",
   authDomain: "lively-navi.firebaseapp.com",
@@ -10,13 +9,15 @@ const DEFAULT_FIREBASE_CONFIG = {
   storageBucket: "lively-navi.firebasestorage.app",
   messagingSenderId: "218951573577",
   appId: "1:218951573577:web:786794bb73686b01039f98",
-  databaseURL: "https://lively-navi-default-rtdb.asia-southeast1.firebasedatabase.app" // アジア（シンガポール）標準
+  databaseURL: "https://lively-navi-default-rtdb.asia-southeast1.firebasedatabase.app"
 };
 
 const FIREBASE_CONFIG_KEY = 'lively_navi_firebase_config';
+const LOCATION_CORRECTIONS_KEY = 'lively_navi_location_corrections';
 let firebaseApp = null;
 let firebaseDb = null;
 
+// --- Firebase初期化 ---
 function getSavedFirebaseConfig() {
   try {
     const raw = localStorage.getItem(FIREBASE_CONFIG_KEY);
@@ -36,15 +37,10 @@ function saveFirebaseConfig(config) {
 
 function initFirebaseApp(config) {
   const activeConfig = config || DEFAULT_FIREBASE_CONFIG;
-  if (!activeConfig || !activeConfig.apiKey) {
-    return false;
-  }
+  if (!activeConfig || !activeConfig.apiKey) return false;
 
   try {
-    if (!window.firebase) {
-      console.warn("Firebase SDK not loaded.");
-      return false;
-    }
+    if (!window.firebase) return false;
 
     if (!firebase.apps.length) {
       firebaseApp = firebase.initializeApp(activeConfig);
@@ -52,24 +48,123 @@ function initFirebaseApp(config) {
       firebaseApp = firebase.app();
     }
 
-    // シンガポール / 米国 URL を自動解決
     const dbUrl = activeConfig.databaseURL || "https://lively-navi-default-rtdb.asia-southeast1.firebasedatabase.app";
     firebaseDb = firebase.app().database(dbUrl);
     console.log("✅ Firebase Connected to:", dbUrl);
     return true;
   } catch (err) {
-    console.warn("Primary DB connection failed, trying fallback US DB URL:", err);
     try {
       firebaseDb = firebase.app().database("https://lively-navi-default-rtdb.firebaseio.com");
       return true;
     } catch (e) {
-      console.error("Firebase connection totally failed:", e);
+      console.error("Firebase init failed:", e);
       return false;
     }
   }
 }
 
-// --- 1. コース情報の送受信 ---
+// --- 1. 地点補正マスター（Location Corrections）の永続保存＆自動検索 ---
+
+function normalizeAddressKey(address, name = "") {
+  const cleanAddr = (address || "").replace(/[\s　\-\ー－]/g, "").trim();
+  const cleanName = (name || "").replace(/[\s　]/g, "").trim();
+  // Firebaseのキーとして使用できない文字を除去
+  return `${cleanAddr}_${cleanName}`.replace(/[\.\#\$\[\]\/]/g, "_");
+}
+
+// 地点修正をローカル＆クラウドマスターへ登録
+async function saveLocationCorrection(address, name, lat, lng) {
+  if (!address || !lat || !lng) return false;
+
+  const key = normalizeAddressKey(address, name);
+  const data = {
+    address: address.trim(),
+    name: (name || "").trim(),
+    lat: parseFloat(lat),
+    lng: parseFloat(lng),
+    updatedAt: Date.now()
+  };
+
+  // 1. ローカルストレージに即時保存
+  try {
+    const corrections = getLocalLocationCorrections();
+    corrections[key] = data;
+    localStorage.setItem(LOCATION_CORRECTIONS_KEY, JSON.stringify(corrections));
+  } catch (e) {
+    console.warn("Local correction save error:", e);
+  }
+
+  // 2. クラウド（Firebase）へ非同期保存
+  if (!firebaseDb) initFirebaseApp(getSavedFirebaseConfig());
+  if (firebaseDb) {
+    try {
+      await firebaseDb.ref(`location_corrections/${key}`).set(data);
+      console.log("✅ Location correction saved to cloud:", key);
+    } catch (err) {
+      console.warn("Cloud correction save error:", err);
+    }
+  }
+
+  return true;
+}
+
+// ローカルに保存されている全地点補正を取得
+function getLocalLocationCorrections() {
+  try {
+    const raw = localStorage.getItem(LOCATION_CORRECTIONS_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (e) {}
+  return {};
+}
+
+// 住所や名前から過去の修正座標を検索（完全一致または住所部分一致）
+function findCorrectedCoords(address, name = "") {
+  if (!address) return null;
+  const corrections = getLocalLocationCorrections();
+
+  // 1. 住所＋名前の完全一致
+  const fullKey = normalizeAddressKey(address, name);
+  if (corrections[fullKey]) {
+    return { lat: corrections[fullKey].lat, lng: corrections[fullKey].lng, isMaster: true };
+  }
+
+  // 2. 住所のみの一致
+  const cleanAddr = (address || "").replace(/[\s　\-\ー－]/g, "").trim();
+  for (const k in corrections) {
+    const item = corrections[k];
+    const itemAddr = (item.address || "").replace(/[\s　\-\ー－]/g, "").trim();
+    if (itemAddr && (itemAddr === cleanAddr || cleanAddr.startsWith(itemAddr) || itemAddr.startsWith(cleanAddr))) {
+      return { lat: item.lat, lng: item.lng, isMaster: true };
+    }
+  }
+
+  return null;
+}
+
+// クラウド上の地点補正マスターを購読＆ローカル同期
+function subscribeLocationCorrections(onLoaded) {
+  if (!firebaseDb) initFirebaseApp(getSavedFirebaseConfig());
+  if (!firebaseDb) return null;
+
+  try {
+    const ref = firebaseDb.ref('location_corrections');
+    ref.on('value', (snapshot) => {
+      const data = snapshot.val();
+      if (data && typeof data === 'object') {
+        const local = getLocalLocationCorrections();
+        const merged = { ...local, ...data };
+        localStorage.setItem(LOCATION_CORRECTIONS_KEY, JSON.stringify(merged));
+        console.log("✅ Synced location corrections master:", Object.keys(merged).length, "points");
+        if (onLoaded) onLoaded(merged);
+      }
+    });
+    return ref;
+  } catch (e) {
+    return null;
+  }
+}
+
+// --- 2. コース情報の送受信 ---
 
 async function uploadCourseToCloud(course) {
   if (!firebaseDb) initFirebaseApp(getSavedFirebaseConfig());
@@ -80,11 +175,9 @@ async function uploadCourseToCloud(course) {
       ...course,
       updatedAt: Date.now()
     });
-    console.log("✅ Course successfully uploaded to cloud:", course.name);
+    console.log("✅ Course uploaded to cloud:", course.name);
     return true;
   } catch (err) {
-    console.error("❌ Upload course error:", err);
-    // フォールバックDBでも再試行
     try {
       const fallbackDb = firebase.app().database("https://lively-navi-default-rtdb.firebaseio.com");
       await fallbackDb.ref(`courses/${course.id}`).set({
@@ -92,10 +185,8 @@ async function uploadCourseToCloud(course) {
         updatedAt: Date.now()
       });
       firebaseDb = fallbackDb;
-      console.log("✅ Course uploaded to fallback DB:", course.name);
       return true;
     } catch (e2) {
-      console.error("❌ Fallback upload failed:", e2);
       return false;
     }
   }
@@ -118,7 +209,6 @@ function subscribeCoursesFromCloud(onCoursesUpdated) {
     }, (err) => console.warn("Subscribe courses warning:", err));
     return ref;
   } catch (e) {
-    console.warn("subscribeCoursesFromCloud err:", e);
     return null;
   }
 }
@@ -140,12 +230,11 @@ async function updateItemStatusToCloud(courseId, itemId, isDone) {
     }
     return true;
   } catch (err) {
-    console.error("Update item status error:", err);
     return false;
   }
 }
 
-// --- 2. ドライバー位置情報の送受信 ---
+// --- 3. ドライバー位置情報の送受信 ---
 
 async function updateDriverLocationToCloud(driverId, locationData) {
   if (!firebaseDb) return false;
@@ -169,14 +258,14 @@ function subscribeDriverLocations(onDriversUpdated) {
     ref.on('value', (snapshot) => {
       const data = snapshot.val();
       onDriversUpdated(data || {});
-    }, (err) => console.warn("Subscribe drivers warning:", err));
+    });
     return ref;
   } catch (e) {
     return null;
   }
 }
 
-// --- 3. 走行ログ（GPS軌跡）の蓄積と取得 ---
+// --- 4. 走行ログ（GPS軌跡）の蓄積と取得 ---
 
 async function appendGpsLogToCloud(courseId, point) {
   if (!firebaseDb) return false;
@@ -201,13 +290,13 @@ async function fetchGpsLogFromCloud(courseId) {
     }
     return [];
   } catch (err) {
-    console.error("Fetch GPS log error:", err);
     return [];
   }
 }
 
-// 初期化実行
+// 初期化実行 & 地点補正マスターの自動同期
 document.addEventListener('DOMContentLoaded', () => {
   const saved = getSavedFirebaseConfig();
   initFirebaseApp(saved);
+  subscribeLocationCorrections();
 });
