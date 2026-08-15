@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Lively Navi - 配達ドライバー</title>
+  <title>LIVELY NAVI - 配達ドライバー</title>
   
   <!-- PWA設定 -->
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#090d16">
+  <meta name="theme-color" content="#042f2e">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Lively Navi">
@@ -16,9 +16,9 @@
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800;900&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
 
-  <!-- Leaflet CSS (Cloudflare CDN) -->
+  <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
   
   <style>
@@ -29,8 +29,8 @@
       width: 100%;
       height: 100%;
       font-family: 'Plus Jakarta Sans', 'Noto Sans JP', -apple-system, sans-serif;
-      background: #090d16;
-      color: #f8fafc;
+      background: #f8fafc;
+      color: #0f172a;
       overflow: hidden;
       user-select: none;
     }
@@ -42,50 +42,59 @@
       position: relative;
     }
 
-    /* 共通モダンボタン */
+    /* 共通ボタン */
     .btn {
-      padding: 12px 16px;
+      padding: 10px 14px;
       border: none;
       border-radius: 12px;
       font-weight: 700;
       cursor: pointer;
-      font-size: 14px;
+      font-size: 13px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
+      gap: 6px;
       transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
       text-decoration: none;
     }
-    .btn-blue {
-      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    .btn-primary {
+      background: linear-gradient(135deg, #0d9488 0%, #059669 100%);
       color: #ffffff;
-      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.2);
+      box-shadow: 0 4px 14px rgba(13, 148, 136, 0.35);
+    }
+    .btn-primary:active { transform: scale(0.97); }
+
+    .btn-blue {
+      background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+      color: #ffffff;
+      box-shadow: 0 4px 14px rgba(2, 132, 199, 0.3);
     }
     .btn-blue:active { transform: scale(0.97); }
 
     .btn-green {
       background: linear-gradient(135deg, #10b981 0%, #059669 100%);
       color: #ffffff;
-      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.2);
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
     }
     .btn-green:active { transform: scale(0.97); }
 
     .btn-slate {
-      background: rgba(30, 41, 59, 0.85);
-      color: #f1f5f9;
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.15);
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.2);
       backdrop-filter: blur(8px);
     }
-    .btn-slate:active { background: rgba(51, 65, 85, 0.9); transform: scale(0.97); }
+    .btn-slate:active { background: rgba(255, 255, 255, 0.25); transform: scale(0.97); }
 
-    .btn-outline {
-      background: transparent;
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      color: #94a3b8;
+    .btn-white {
+      background: #ffffff;
+      color: #0f172a;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
     }
+    .btn-white:active { background: #f1f5f9; transform: scale(0.97); }
 
-    /* 車の現在地アイコン (パルスエフェクト) */
+    /* ナビポインター (現在地アイコン) */
     .car-marker-container {
       position: relative;
       display: flex;
@@ -93,16 +102,17 @@
       justify-content: center;
     }
     .car-icon-body {
-      width: 42px;
-      height: 42px;
-      background: #0f172a;
-      border: 2.5px solid #38bdf8;
+      width: 40px;
+      height: 40px;
+      background: #0284c7;
+      border: 3px solid #ffffff;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 22px;
-      box-shadow: 0 6px 18px rgba(0,0,0,0.6), 0 0 14px rgba(56, 189, 248, 0.5);
+      font-size: 20px;
+      color: #fff;
+      box-shadow: 0 6px 16px rgba(2, 132, 199, 0.5);
       z-index: 10;
     }
     .car-pulse {
@@ -110,7 +120,7 @@
       width: 56px;
       height: 56px;
       border-radius: 50%;
-      background: rgba(56, 189, 248, 0.35);
+      background: rgba(2, 132, 199, 0.35);
       animation: pulseAnim 1.8s infinite ease-out;
       z-index: 1;
     }
@@ -119,7 +129,7 @@
       100% { transform: scale(1.6); opacity: 0; }
     }
 
-    /* --- 画面1: コース選択画面 --- */
+    /* --- 画面1: コース選択画面 (HOME) --- */
     #view-course-select {
       flex: 1;
       display: flex;
@@ -127,46 +137,45 @@
       padding: 20px 16px;
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
-      background: radial-gradient(circle at 50% 0%, #1e1b4b 0%, #090d16 60%);
+      background: linear-gradient(180deg, #f0fdfa 0%, #f8fafc 100%);
     }
     .app-header-hero {
       text-align: center;
-      margin: 12px 0 20px;
+      margin: 10px 0 20px;
     }
     .logo-badge-wrap {
       display: inline-block;
       background: #ffffff;
-      padding: 8px 18px;
-      border-radius: 14px;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
-      margin-bottom: 8px;
+      padding: 8px 20px;
+      border-radius: 16px;
+      box-shadow: 0 8px 24px rgba(13, 148, 136, 0.12);
+      margin-bottom: 6px;
     }
     .app-subtitle {
       font-size: 13px;
-      color: #94a3b8;
-      font-weight: 500;
+      color: #0d9488;
+      font-weight: 700;
+      letter-spacing: 0.5px;
     }
 
     .course-card-mobile {
-      background: rgba(30, 41, 59, 0.75);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border-radius: 18px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 20px;
       padding: 18px;
       margin-bottom: 14px;
-      box-shadow: 0 10px 28px rgba(0,0,0,0.3);
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
       transition: all 0.2s ease;
     }
     .course-title-mobile {
       font-size: 17px;
       font-weight: 800;
-      color: #f8fafc;
+      color: #0f172a;
       letter-spacing: -0.3px;
     }
     .course-desc-mobile {
       font-size: 12px;
-      color: #94a3b8;
+      color: #64748b;
       margin: 4px 0 12px;
     }
     .course-stats {
@@ -175,13 +184,13 @@
       align-items: center;
       font-size: 13px;
       margin-bottom: 14px;
-      background: rgba(15, 23, 42, 0.8);
+      background: #f8fafc;
       padding: 10px 14px;
-      border-radius: 10px;
-      border: 1px solid rgba(255, 255, 255, 0.04);
+      border-radius: 12px;
+      border: 1px solid #f1f5f9;
     }
 
-    /* --- 画面2: 運行・ナビ画面 --- */
+    /* --- 画面2: 運行・ナビ画面 (NAVIGATION) --- */
     #view-nav-main {
       flex: 1;
       display: none;
@@ -191,60 +200,50 @@
       position: relative;
     }
 
-    /* ナビ上部バー */
+    /* ナビ上部ヘッダーバー */
     #nav-header {
-      background: rgba(15, 23, 42, 0.9);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
+      background: #ffffff;
       padding: 8px 12px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      border-bottom: 1px solid #e2e8f0;
       z-index: 1000;
-      height: 52px;
+      height: 50px;
     }
 
     /* メインマップエリア */
     #map-container {
       flex: 1;
       width: 100%;
-      height: calc(100% - 52px);
+      height: calc(100% - 50px);
       position: relative;
-      background: #090d16;
+      background: #f1f5f9;
     }
     #map {
       width: 100%;
       height: 100%;
-      background: #090d16;
+      background: #f1f5f9;
     }
 
-    /* 🚚 移動中 HUD風 お届け先カード（超コンパクト・スリム設計） */
+    /* 🚚 02. NAVIGATION 公式デザイン HUDカード（画面最上部） */
     #transit-target-card {
       position: absolute;
-      top: 8px;
-      left: 8px;
-      right: 8px;
-      background: rgba(15, 23, 42, 0.95);
-      border: 1.5px solid rgba(56, 189, 248, 0.4);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border-radius: 14px;
-      padding: 8px 12px;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      background: linear-gradient(135deg, #042f2e 0%, #0f172a 100%);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 18px;
+      padding: 10px 14px;
       z-index: 1000;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.5), 0 0 16px rgba(56, 189, 248, 0.15);
-      animation: fadeIn 0.2s ease-out;
+      box-shadow: 0 12px 32px rgba(4, 47, 46, 0.4), 0 2px 6px rgba(0,0,0,0.2);
+      color: #ffffff;
+      animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
     }
-    .btn-arrival:active {
-      transform: scale(0.98);
-      background: #059669;
-    }
-    .btn-arrival.near-pulse {
-      animation: arrivalGlow 1.5s infinite alternate;
-    }
-    @keyframes arrivalGlow {
-      0% { box-shadow: 0 0 15px rgba(16, 185, 129, 0.5); transform: scale(1); }
-      100% { box-shadow: 0 0 30px rgba(16, 185, 129, 0.9); transform: scale(1.02); }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-8px); }
+      to { opacity: 1; transform: translateY(0); }
     }
 
     /* 2択選択モーダル（フローティングカード） */
@@ -258,19 +257,14 @@
       pointer-events: none;
       animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
     }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(-10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
     .modal-content-card {
       pointer-events: auto;
-      background: rgba(15, 23, 42, 0.95);
-      border: 1.5px solid rgba(56, 189, 248, 0.5);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
+      background: linear-gradient(135deg, #042f2e 0%, #0f172a 100%);
+      border: 1.5px solid #14b8a6;
       border-radius: 20px;
       padding: 16px 18px;
-      box-shadow: 0 16px 40px rgba(0,0,0,0.7), 0 0 24px rgba(56, 189, 248, 0.2);
+      box-shadow: 0 16px 40px rgba(0,0,0,0.5);
+      color: #ffffff;
     }
     .modal-headline {
       font-size: 11px;
@@ -281,12 +275,11 @@
       margin-bottom: 4px;
     }
     .modal-target-title {
-      font-size: 21px;
+      font-size: 20px;
       font-weight: 900;
       color: #38bdf8;
       margin-bottom: 4px;
       line-height: 1.3;
-      letter-spacing: -0.3px;
     }
     .modal-target-addr {
       font-size: 13px;
@@ -294,15 +287,14 @@
       margin-bottom: 16px;
     }
 
-    /* 配送先選択リストモーダル */
+    /* 配送先選択リストモーダル (03. SEARCH風) */
     #all-destinations-modal {
       position: absolute;
       top: 0;
       left: 0;
       right: 0;
       bottom: 0;
-      background: rgba(9, 13, 22, 0.97);
-      backdrop-filter: blur(16px);
+      background: #f8fafc;
       z-index: 2100;
       display: none;
       flex-direction: column;
@@ -315,35 +307,32 @@
       -webkit-overflow-scrolling: touch;
     }
     .dest-select-card {
-      background: rgba(30, 41, 59, 0.7);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 14px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
       padding: 14px;
       margin-bottom: 10px;
       cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.03);
       transition: all 0.2s;
     }
-    .dest-select-card:active {
-      background: rgba(51, 65, 85, 0.9);
-      border-color: #38bdf8;
-    }
+    .dest-select-card:active { background: #f1f5f9; }
     .dest-select-card.completed {
-      opacity: 0.6;
-      background: rgba(6, 78, 59, 0.4);
-      border-color: #059669;
+      background: #f0fdf4;
+      border-color: #86efac;
     }
 
     /* GPS記録中インジケータ */
     #tracking-indicator {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
-      background: rgba(239, 68, 68, 0.15);
+      gap: 4px;
+      background: rgba(239, 68, 68, 0.2);
       border: 1px solid rgba(239, 68, 68, 0.4);
-      padding: 3px 8px;
+      padding: 2px 8px;
       border-radius: 20px;
-      font-size: 11px;
-      color: #f87171;
+      font-size: 10px;
+      color: #fca5a5;
       font-weight: 700;
     }
   </style>
@@ -351,20 +340,20 @@
 <body>
 
   <div id="app-root">
-    <!-- ================= 画面1: コース選択画面 ================= -->
+    <!-- ================= 画面1: コース選択画面 (HOME) ================= -->
     <div id="view-course-select">
       <div class="app-header-hero">
         <div class="logo-badge-wrap">
-          <img src="logo.png" alt="Lively Navi" style="max-width: 180px; width: 100%; height: auto; display: block;">
+          <img src="logo.png" alt="LIVELY NAVI" style="max-width: 170px; width: 100%; height: auto; display: block;">
         </div>
-        <div class="app-subtitle">ルート配送ナビゲーション＆運行管理</div>
+        <div class="app-subtitle">Move Lively, Arrive Happy.</div>
       </div>
 
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
-        <b style="font-size:16px; font-weight:800;">本日のお届けコース</b>
+        <b style="font-size:16px; font-weight:800; color:#0f172a;">本日のお届けコース</b>
         <div style="display:flex; gap:6px;">
-          <button class="btn btn-outline" style="padding:4px 8px; font-size:11px;" onclick="refreshCourses()">🔄 更新</button>
-          <button class="btn btn-slate" style="padding:4px 8px; font-size:11px; color:#38bdf8;" onclick="forceClearCacheAndReload()">⚡ 最新化</button>
+          <button class="btn btn-white" style="padding:4px 10px; font-size:11px;" onclick="refreshCourses()">🔄 更新</button>
+          <button class="btn btn-white" style="padding:4px 10px; font-size:11px; color:#0d9488;" onclick="forceClearCacheAndReload()">⚡ 最新化</button>
         </div>
       </div>
 
@@ -373,34 +362,32 @@
       </div>
     </div>
 
-    <!-- ================= 画面2: 運行・ナビ画面 ================= -->
+    <!-- ================= 画面2: 運行・ナビ画面 (NAVIGATION) ================= -->
     <div id="view-nav-main">
       <!-- 上部ヘッダー -->
       <div id="nav-header">
-        <button class="btn btn-slate" style="padding:6px 10px; font-size:12px;" onclick="exitToCourseSelect()">
+        <button class="btn btn-white" style="padding:6px 12px; font-size:12px;" onclick="exitToCourseSelect()">
           ◀ コース一覧
         </button>
-        <div style="background:#fff; padding:3px 8px; border-radius:6px;">
-          <img src="logo.png" alt="Lively Navi" style="height: 18px; display: block;">
-        </div>
-        <div style="font-size:12px; color:#38bdf8; font-weight:800; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.25); padding:3px 8px; border-radius:12px;">
+        <img src="logo.png" alt="LIVELY NAVI" style="height: 20px; display: block;">
+        <div style="font-size:12px; color:#0d9488; font-weight:800; background:#f0fdfa; border:1px solid #ccfbf1; padding:3px 10px; border-radius:12px;">
           <span id="navDeliveredCount">0</span>/<span id="navTotalCount">0</span> 完了
         </div>
       </div>
 
       <!-- マップコンテナ -->
       <div id="map-container">
-        <!-- 🚚 移動中 HUD風 お届け先カード（超スリム設計・地図視認性最大化） -->
+        <!-- 🚚 02. NAVIGATION 公式デザイン HUDカード（画面最上部） -->
         <div id="transit-target-card" style="display:none;">
           <!-- 1段目: 配達順・氏名 ＋ GPS記録中 -->
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; gap:8px;">
             <div style="display:flex; align-items:center; gap:6px; overflow:hidden; flex:1;">
-              <span style="background:linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color:#fff; font-size:11px; font-weight:800; padding:2px 6px; border-radius:6px; white-space:nowrap;">
+              <span style="background:linear-gradient(135deg, #0d9488 0%, #0f766e 100%); color:#fff; font-size:11px; font-weight:800; padding:2px 8px; border-radius:6px; white-space:nowrap;">
                 #<span id="transitOrderNum">1</span>
               </span>
               <span style="font-size:16px; font-weight:900; color:#38bdf8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" id="transitName">宛名 様</span>
             </div>
-            <div id="tracking-indicator" style="padding:2px 8px; font-size:10px; white-space:nowrap; flex-shrink:0;">
+            <div id="tracking-indicator">
               🔴 GPS (<span id="gpsPointCount">0</span>)
             </div>
           </div>
@@ -408,23 +395,23 @@
           <!-- 2段目: 住所 ＋ 残り距離 -->
           <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px; color:#cbd5e1; margin-bottom:6px; gap:8px;">
             <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1;" id="transitAddress">住所</span>
-            <span style="white-space:nowrap; color:#38bdf8; font-weight:800; background:rgba(0,0,0,0.3); padding:1px 6px; border-radius:4px;" id="distanceText">-- m</span>
+            <span style="white-space:nowrap; color:#38bdf8; font-weight:800; background:rgba(0,0,0,0.3); padding:1px 8px; border-radius:6px;" id="distanceText">-- m</span>
             <span id="proximityStatusBadge" style="display:none;">案内中</span>
           </div>
 
-          <div id="transitMemoBox" style="display:none; background:rgba(245, 158, 11, 0.15); border-left:2px solid #f59e0b; padding:2px 6px; font-size:11px; color:#fbbf24; border-radius:0 4px 4px 0; margin-bottom:6px;">
+          <div id="transitMemoBox" style="display:none; background:rgba(245, 158, 11, 0.2); border-left:2px solid #f59e0b; padding:3px 8px; font-size:11px; color:#fde68a; border-radius:0 4px 4px 0; margin-bottom:6px;">
             📝 <span id="transitMemoText">備考メモ</span>
           </div>
 
           <!-- 3段目: 3ボタン横並び（到着・Gマップ・変更） -->
           <div style="display:flex; gap:6px; align-items:center;">
-            <button class="btn btn-green" id="mainArrivalButton" style="flex:1.2; padding:8px 4px; font-size:13px; font-weight:900;" onclick="onArrivalClick()">
+            <button class="btn btn-green" id="mainArrivalButton" style="flex:1.2; padding:9px 4px; font-size:13px; font-weight:900;" onclick="onArrivalClick()">
               📍 到着
             </button>
-            <button class="btn btn-blue" style="flex:1; padding:8px 4px; font-size:12px; font-weight:700;" onclick="openExternalGoogleMap()">
+            <button class="btn btn-blue" style="flex:1; padding:9px 4px; font-size:12px; font-weight:700;" onclick="openExternalGoogleMap()">
               🗺️ Gマップ
             </button>
-            <button class="btn btn-slate" style="flex:0.9; padding:8px 4px; font-size:12px; font-weight:700;" onclick="openChangeDestinationModal()">
+            <button class="btn btn-slate" style="flex:0.9; padding:9px 4px; font-size:12px; font-weight:700;" onclick="openChangeDestinationModal()">
               🔄 変更
             </button>
           </div>
@@ -434,7 +421,7 @@
         <div id="map"></div>
 
         <!-- 📍 現在地へセンタリングするフローティングボタン -->
-        <button id="btnRecenterLocation" class="btn btn-slate" style="position:absolute; bottom:24px; right:16px; z-index:1000; border-radius:50%; width:50px; height:50px; padding:0; box-shadow:0 6px 20px rgba(0,0,0,0.6); font-size:22px; border:2px solid #38bdf8;" onclick="centerOnUserLocation()" title="現在地を中心にする">
+        <button id="btnRecenterLocation" class="btn btn-white" style="position:absolute; bottom:24px; right:16px; z-index:1000; border-radius:50%; width:50px; height:50px; padding:0; box-shadow:0 8px 24px rgba(0,0,0,0.15); font-size:22px; color:#0d9488; border:1px solid #e2e8f0;" onclick="centerOnUserLocation()" title="現在地を中心にする">
           📍
         </button>
       </div>
@@ -446,11 +433,11 @@
         </div>
       </div>
 
-      <!-- ================= 配送先一覧選択モーダル ================= -->
+      <!-- ================= 配送先一覧選択モーダル (03. SEARCH) ================= -->
       <div id="all-destinations-modal">
-        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:12px;">
-          <b style="font-size:17px; color:#38bdf8; font-weight:800;">📋 配送先を一覧から選択</b>
-          <button class="btn btn-slate" style="padding:4px 10px; font-size:12px;" onclick="closeAllDestinationsModal()">✕ 閉じる</button>
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e2e8f0; padding-bottom:12px;">
+          <b style="font-size:17px; color:#0f172a; font-weight:800;">📋 配送先を一覧から選択</b>
+          <button class="btn btn-white" style="padding:4px 10px; font-size:12px;" onclick="closeAllDestinationsModal()">✕ 閉じる</button>
         </div>
 
         <div class="dest-list-scroll" id="destListContainer"></div>
@@ -469,7 +456,7 @@
     // --- Service Worker 強制更新 ---
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=6').then((reg) => {
+        navigator.serviceWorker.register('sw.js?v=7').then((reg) => {
           reg.update();
         }).catch(err => console.log('SW registration failed:', err));
       });
@@ -554,10 +541,10 @@
 
       if (!courses || courses.length === 0) {
         container.innerHTML = `
-          <div style="text-align:center; color:#94a3b8; margin-top:40px; padding:20px; background:rgba(30,41,59,0.5); border-radius:14px;">
+          <div style="text-align:center; color:#64748b; margin-top:40px; padding:24px; background:#ffffff; border-radius:18px; border:1px solid #e2e8f0; box-shadow:0 4px 14px rgba(0,0,0,0.03);">
             📦 本日の配達コースはまだありません。<br>
-            <span style="font-size:12px; color:#cbd5e1; display:block; margin:8px 0 14px;">PC管理画面でCSVを保存するか、下記ボタンでサンプルを読み込んでください。</span>
-            <button class="btn btn-blue" style="font-size:13px; padding:8px 16px;" onclick="loadSampleToDriver()">＋ サンプル便を読み込む</button>
+            <span style="font-size:12px; color:#94a3b8; display:block; margin:8px 0 14px;">PC管理画面でCSVを保存するか、下記ボタンでサンプルを読み込んでください。</span>
+            <button class="btn btn-primary" style="font-size:13px; padding:8px 16px;" onclick="loadSampleToDriver()">＋ サンプル便を読み込む</button>
           </div>
         `;
         return;
@@ -575,18 +562,18 @@
         card.innerHTML = `
           <div style="display:flex; justify-content:space-between; align-items:flex-start;">
             <div class="course-title-mobile">${course.name}</div>
-            <button class="btn btn-slate" style="padding:3px 8px; font-size:11px; color:#94a3b8;" onclick="resetCourseStatus('${course.id}', event)">
+            <button class="btn btn-white" style="padding:2px 8px; font-size:11px; color:#64748b;" onclick="resetCourseStatus('${course.id}', event)">
               🔄 リセット
             </button>
           </div>
           <div class="course-desc-mobile">${course.memo || 'ルート配送'}</div>
           <div class="course-stats">
-            <span>件数: <b>${totalCount}件</b></span>
-            <span style="color:${isAllDone ? '#4ade80' : '#38bdf8'}; font-weight:800;">
+            <span>件数: <b style="color:#0f172a;">${totalCount}件</b></span>
+            <span style="color:${isAllDone ? '#10b981' : '#0d9488'}; font-weight:800;">
               進捗: ${doneCount}/${totalCount} (${percent}%)
             </span>
           </div>
-          <button class="btn ${isAllDone ? 'btn-green' : 'btn-blue'}" style="width:100%; font-size:15px; padding:13px;" onclick="startDeliveryWorkflow('${course.id}')">
+          <button class="btn ${isAllDone ? 'btn-green' : 'btn-primary'}" style="width:100%; font-size:15px; padding:13px;" onclick="startDeliveryWorkflow('${course.id}')">
             ${isAllDone ? '✅ 配達完了済（確認・再配送）' : `🚚 配送を開始する（残り ${remainingCount}件）`}
           </button>
         `;
@@ -649,7 +636,7 @@
           <div class="modal-headline" style="color:#4ade80;">🎉 全件配達完了</div>
           <div class="modal-target-title" style="color:#4ade80; font-size:19px;">本日の配達はすべて完了しています</div>
           <div class="modal-target-addr">配達データは保持されています。一覧から選んで再配送や確認が可能です。</div>
-          <button class="btn btn-blue" style="width:100%; font-size:14px; padding:12px; margin-bottom:8px;" onclick="openAllDestinationsModal()">
+          <button class="btn btn-primary" style="width:100%; font-size:14px; padding:12px; margin-bottom:8px;" onclick="openAllDestinationsModal()">
             📋 配送先一覧から選んで再度向かう
           </button>
           <button class="btn btn-slate" style="width:100%; font-size:13px; padding:10px;" onclick="resetCurrentCourseAndRestart()">
@@ -665,7 +652,7 @@
         <div class="modal-headline">${isFirst ? "【1件目の配送先を選択】" : "【次の配送先を選択】"}</div>
         <div class="modal-target-title">#${nextDefault.order || nextDefault.id} ${nextDefault.name} 様</div>
         <div class="modal-target-addr">${nextDefault.address}</div>
-        <button class="btn btn-blue" style="width:100%; font-size:15px; padding:14px; margin-bottom:10px;" onclick="chooseNextSequentialTarget()">
+        <button class="btn btn-primary" style="width:100%; font-size:15px; padding:14px; margin-bottom:10px;" onclick="chooseNextSequentialTarget()">
           🚚 この順番通りに出発する
         </button>
         <button class="btn btn-slate" style="width:100%; font-size:14px; padding:12px;" onclick="openAllDestinationsModal()">
@@ -706,18 +693,18 @@
         card.className = `dest-select-card ${item.isDone ? 'completed' : ''}`;
         card.innerHTML = `
           <div style="display:flex; justify-content:space-between; align-items:center;">
-            <b style="font-size:15px; font-weight:800;">#${item.order || item.id} ${item.name} 様</b>
-            <span style="font-size:11px; padding:2px 8px; border-radius:10px; font-weight:700; background:${item.isDone ? '#10b981' : '#2563eb'}; color:#fff;">
+            <b style="font-size:15px; font-weight:800; color:#0f172a;">#${item.order || item.id} ${item.name} 様</b>
+            <span style="font-size:11px; padding:2px 8px; border-radius:10px; font-weight:700; background:${item.isDone ? '#10b981' : '#0d9488'}; color:#fff;">
               ${item.isDone ? '✅ 配達済' : '未配達'}
             </span>
           </div>
-          <div style="font-size:12px; color:#94a3b8; margin:4px 0;">${item.address}</div>
-          ${item.memo ? `<div style="font-size:11px; color:#fbbf24;">📝 ${item.memo}</div>` : ''}
+          <div style="font-size:12px; color:#64748b; margin:4px 0;">${item.address}</div>
+          ${item.memo ? `<div style="font-size:11px; color:#d97706; font-weight:600;">📝 ${item.memo}</div>` : ''}
           <div style="display:flex; gap:6px; margin-top:10px;">
-            <button class="btn btn-blue" style="flex:1; padding:8px; font-size:12px;" onclick="event.stopPropagation(); setTargetAndBeginTransitDirect(${item.id})">
+            <button class="btn btn-primary" style="flex:1; padding:8px; font-size:12px;" onclick="event.stopPropagation(); setTargetAndBeginTransitDirect(${item.id})">
               🚚 ここへ向かう
             </button>
-            <button class="btn btn-slate" style="padding:8px 12px; font-size:11px;" onclick="event.stopPropagation(); toggleItemDoneState(${item.id})">
+            <button class="btn btn-white" style="padding:8px 12px; font-size:11px;" onclick="event.stopPropagation(); toggleItemDoneState(${item.id})">
               ${item.isDone ? '↩ 未完に戻す' : '✅ 完了にする'}
             </button>
           </div>
@@ -878,14 +865,14 @@
         const carHtml = `
           <div class="car-marker-container">
             <div class="car-pulse"></div>
-            <div class="car-icon-body">🚚</div>
+            <div class="car-icon-body">▲</div>
           </div>
         `;
         const carIcon = L.divIcon({
           html: carHtml,
           className: 'custom-car-icon',
-          iconSize: [42, 42],
-          iconAnchor: [21, 21]
+          iconSize: [40, 40],
+          iconAnchor: [20, 20]
         });
         userCarMarker = L.marker([lat, lng], { icon: carIcon, zIndexOffset: 1000 }).addTo(map);
       } else {
@@ -907,7 +894,7 @@
         if (data.routes && data.routes.length > 0) {
           if (currentRouteLayer) map.removeLayer(currentRouteLayer);
           currentRouteLayer = L.geoJSON(data.routes[0].geometry, {
-            style: { color: '#1d4ed8', weight: 7, opacity: 0.95 } // 濃い青色
+            style: { color: '#0284c7', weight: 8, opacity: 0.95 } // 鮮やかなエレクトリックブルー
           }).addTo(map);
           map.setView([lat1, lng1], 16);
         }
@@ -930,7 +917,6 @@
         saveCourses(courses);
       }
 
-      // クラウドへ配達完了を同期
       if (window.updateItemStatusToCloud && currentCourse) {
         updateItemStatusToCloud(currentCourse.id, currentTargetItem.id, true);
       }
@@ -946,6 +932,8 @@
 
       promptNextDestinationSelection(false);
     };
+
+    // --- セッション状態の自動保存・復元 ---
     const ACTIVE_STATE_KEY = 'lively_navi_active_state';
 
     function saveActiveSessionState() {
@@ -997,7 +985,7 @@
 
         const marker = L.circleMarker([item.lat, item.lng], {
           radius: isTarget ? 14 : 9,
-          fillColor: item.isDone ? "#10b981" : (isTarget ? "#f59e0b" : "#1d4ed8"),
+          fillColor: item.isDone ? "#10b981" : (isTarget ? "#0d9488" : "#0284c7"),
           color: "#ffffff",
           weight: isTarget ? 3 : 2,
           fillOpacity: 1
@@ -1005,11 +993,11 @@
 
         marker.bindPopup(`
           <div style="min-width:170px; font-size:12px; font-family:'Noto Sans JP',sans-serif;">
-            <b style="font-size:14px;">#${item.order || item.id} ${item.name} 様</b><br>
+            <b style="font-size:14px; color:#0f172a;">#${item.order || item.id} ${item.name} 様</b><br>
             <span style="color:#64748b;">${item.address}</span><br>
-            ${item.memo ? `<span style="color:#fbbf24;">📝 ${item.memo}</span><br>` : ''}
+            ${item.memo ? `<span style="color:#d97706; font-weight:600;">📝 ${item.memo}</span><br>` : ''}
             <div style="margin-top:8px;">
-              <button class="btn btn-blue" style="width:100%; padding:6px; font-size:11px;" onclick="setTargetAndBeginTransitDirect(${item.id})">
+              <button class="btn btn-primary" style="width:100%; padding:6px; font-size:11px;" onclick="setTargetAndBeginTransitDirect(${item.id})">
                 🚚 ここへ向かう
               </button>
             </div>
@@ -1048,7 +1036,6 @@
 
         updateCarMarker(pt.lat, pt.lng);
 
-        // クラウドへ位置情報 & 走行ログを自動送信（3秒間隔）
         const now = Date.now();
         if (now - lastCloudUploadTime > 3000) {
           lastCloudUploadTime = now;
@@ -1078,7 +1065,6 @@
     function initDriverApp() {
       refreshCourses();
 
-      // Googleマップ起動時や画面復帰時の自動セッション復元
       try {
         const savedStateRaw = localStorage.getItem(ACTIVE_STATE_KEY);
         if (savedStateRaw) {

@@ -3,19 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Lively Navi - 次世代ルート配送ナビゲーション</title>
+  <title>LIVELY NAVI - Move Lively, Arrive Happy.</title>
   
   <!-- PWA設定 -->
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#090d16">
+  <meta name="theme-color" content="#f0fdfa">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <link rel="apple-touch-icon" href="logo.png">
 
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
 
   <style>
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -28,144 +28,201 @@
       justify-content: center;
       align-items: center;
       font-family: 'Plus Jakarta Sans', 'Noto Sans JP', -apple-system, sans-serif;
-      background: radial-gradient(circle at 50% 10%, #1e1b4b 0%, #090d16 60%, #030712 100%);
-      color: #f8fafc;
+      background: linear-gradient(135deg, #f0fdfa 0%, #e0f2fe 50%, #f8fafc 100%);
+      color: #0f172a;
       text-align: center;
-      padding: 20px;
+      padding: 24px 16px;
       overflow-x: hidden;
       position: relative;
     }
 
-    /* 背景の環境光エフェクト */
-    .ambient-glow {
+    /* 背景のソフトな環境光 */
+    .ambient-circle-1 {
       position: absolute;
-      width: 320px;
-      height: 320px;
-      background: radial-gradient(circle, rgba(56, 189, 248, 0.15) 0%, rgba(220, 38, 38, 0.08) 60%, transparent 100%);
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
+      width: 450px;
+      height: 450px;
+      background: radial-gradient(circle, rgba(20, 184, 166, 0.15) 0%, transparent 70%);
+      top: -100px;
+      left: -100px;
+      border-radius: 50%;
       pointer-events: none;
       filter: blur(40px);
-      z-index: 0;
+    }
+    .ambient-circle-2 {
+      position: absolute;
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(56, 189, 248, 0.18) 0%, transparent 70%);
+      bottom: -80px;
+      right: -80px;
+      border-radius: 50%;
+      pointer-events: none;
+      filter: blur(40px);
     }
 
     .portal-card {
       position: relative;
       z-index: 1;
-      background: rgba(15, 23, 42, 0.75);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border-radius: 24px;
-      padding: 40px 28px;
-      max-width: 440px;
+      background: rgba(255, 255, 255, 0.88);
+      border: 1px solid rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border-radius: 28px;
+      padding: 44px 32px;
+      max-width: 480px;
       width: 100%;
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05);
+      box-shadow: 0 20px 50px rgba(15, 23, 42, 0.08), 0 1px 3px rgba(15, 23, 42, 0.04);
       animation: cardEnter 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
 
     @keyframes cardEnter {
-      from { opacity: 0; transform: translateY(20px) scale(0.96); }
+      from { opacity: 0; transform: translateY(24px) scale(0.96); }
       to { opacity: 1; transform: translateY(0) scale(1); }
     }
 
-    .logo-container {
-      display: inline-block;
-      background: #ffffff;
-      padding: 10px 22px;
-      border-radius: 16px;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    .brand-header {
       margin-bottom: 24px;
-      transition: transform 0.3s ease;
     }
-    .logo-container:hover {
-      transform: translateY(-2px);
+    .logo-container {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: #ffffff;
+      padding: 10px 24px;
+      border-radius: 18px;
+      box-shadow: 0 8px 24px rgba(13, 148, 136, 0.12);
+      margin-bottom: 12px;
     }
     .logo-img {
-      max-width: 220px;
+      max-width: 200px;
       width: 100%;
       height: auto;
       display: block;
     }
 
-    .app-tagline {
-      font-size: 14px;
-      color: #94a3b8;
+    .brand-slogan {
+      font-size: 13px;
+      font-weight: 700;
+      color: #0d9488;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .brand-catchcopy {
+      font-size: 22px;
+      font-weight: 900;
+      color: #0f172a;
+      letter-spacing: -0.5px;
+      margin: 0 0 12px;
+    }
+    .brand-desc {
+      font-size: 13px;
+      color: #64748b;
       line-height: 1.6;
-      margin: 0 0 32px;
-      font-weight: 500;
+      margin: 0 0 28px;
+    }
+
+    /* 特徴グリッド */
+    .features-list {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 32px;
+      text-align: left;
+    }
+    .feature-item {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .feature-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
+      background: #e0f2fe;
+      color: #0284c7;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+    .feature-text b {
+      display: block;
+      font-size: 12px;
+      color: #0f172a;
+    }
+    .feature-text span {
+      font-size: 10px;
+      color: #64748b;
     }
 
     .btn-group {
       display: flex;
       flex-direction: column;
-      gap: 14px;
+      gap: 12px;
     }
 
     .portal-btn {
       padding: 16px 20px;
-      border-radius: 14px;
+      border-radius: 16px;
       font-size: 15px;
-      font-weight: 700;
+      font-weight: 800;
       text-decoration: none;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 12px;
       transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-      position: relative;
-      overflow: hidden;
     }
 
     .btn-driver {
-      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+      background: linear-gradient(135deg, #0d9488 0%, #059669 100%);
       color: #ffffff;
-      box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.25);
-      border: 1px solid rgba(255, 255, 255, 0.15);
+      box-shadow: 0 8px 24px rgba(13, 148, 136, 0.35);
     }
     .btn-driver:hover {
       transform: translateY(-2px);
-      box-shadow: 0 10px 28px rgba(37, 99, 235, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.3);
+      box-shadow: 0 12px 30px rgba(13, 148, 136, 0.45);
     }
-    .btn-driver:active {
-      transform: scale(0.98);
-    }
+    .btn-driver:active { transform: scale(0.98); }
 
     .btn-admin {
-      background: rgba(30, 41, 59, 0.8);
-      color: #f1f5f9;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+      background: #ffffff;
+      color: #0f172a;
+      border: 1.5px solid #e2e8f0;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
     }
     .btn-admin:hover {
-      background: rgba(51, 65, 85, 0.9);
-      border-color: rgba(255, 255, 255, 0.2);
+      background: #f8fafc;
+      border-color: #cbd5e1;
       transform: translateY(-2px);
     }
-    .btn-admin:active {
-      transform: scale(0.98);
-    }
+    .btn-admin:active { transform: scale(0.98); }
 
     .badge-cloud {
       display: inline-flex;
       align-items: center;
       gap: 6px;
       padding: 4px 12px;
-      background: rgba(16, 185, 129, 0.1);
-      border: 1px solid rgba(16, 185, 129, 0.3);
+      background: rgba(13, 148, 136, 0.1);
+      border: 1px solid rgba(13, 148, 136, 0.25);
       border-radius: 20px;
       font-size: 11px;
-      color: #34d399;
-      font-weight: 600;
+      color: #0d9488;
+      font-weight: 700;
       margin-bottom: 20px;
     }
     .badge-cloud-dot {
       width: 6px;
       height: 6px;
-      background: #10b981;
+      background: #0d9488;
       border-radius: 50%;
-      box-shadow: 0 0 8px #10b981;
+      box-shadow: 0 0 6px #0d9488;
       animation: pulseDot 2s infinite;
     }
     @keyframes pulseDot {
@@ -173,22 +230,21 @@
       50% { opacity: 1; }
       100% { opacity: 0.4; }
     }
-
-    .pwa-hint {
-      margin-top: 24px;
-      font-size: 11px;
-      color: #64748b;
-      line-height: 1.5;
-    }
   </style>
 </head>
 <body>
 
-  <div class="ambient-glow"></div>
+  <div class="ambient-circle-1"></div>
+  <div class="ambient-circle-2"></div>
 
   <div class="portal-card">
-    <div class="logo-container">
-      <img src="logo.png" alt="Lively Navi" class="logo-img">
+    <div class="brand-header">
+      <div class="logo-container">
+        <img src="logo.png" alt="LIVELY NAVI" class="logo-img">
+      </div>
+      <div class="brand-slogan">Move Lively, Arrive Happy.</div>
+      <h1 class="brand-catchcopy">毎日の移動を、もっと心地よく。</h1>
+      <p class="brand-desc">リアルタイム運行情報とスマートなルート案内で、<br>配送業務を軽やかにサポートします。</p>
     </div>
 
     <div>
@@ -197,9 +253,36 @@
       </span>
     </div>
 
-    <p class="app-tagline">
-      ルート配送に特化した次世代ナビゲーション＆<br>リアルタイム運行マネジメント
-    </p>
+    <div class="features-list">
+      <div class="feature-item">
+        <div class="feature-icon">🚀</div>
+        <div class="feature-text">
+          <b>Smart & Accurate</b>
+          <span>最適ルートナビ</span>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon" style="background:#fef2f2; color:#ef4444;">📍</div>
+        <div class="feature-text">
+          <b>Safe & Reliable</b>
+          <span>GPS近接自動判定</span>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon" style="background:#f0fdf4; color:#16a34a;">☁️</div>
+        <div class="feature-text">
+          <b>Live Cloud Sync</b>
+          <span>リアルタイム運行監視</span>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon" style="background:#fdf4ff; color:#a855f7;">🗺️</div>
+        <div class="feature-text">
+          <b>Google Maps Link</b>
+          <span>安全なシームレス連携</span>
+        </div>
+      </div>
+    </div>
 
     <div class="btn-group">
       <a href="driver.html" class="portal-btn btn-driver">
@@ -209,15 +292,11 @@
         <span style="font-size:18px;">🖥️</span> PC管理画面（コース作成・監視）を開く
       </a>
     </div>
-
-    <div class="pwa-hint">
-      ※スマートフォンでご利用の際は、ブラウザメニューから「ホーム画面に追加」を行うと全画面ネイティブアプリとして快適にご利用いただけます。
-    </div>
   </div>
 
   <script>
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js').catch(err => console.log('SW failed:', err));
+      navigator.serviceWorker.register('sw.js?v=7').catch(err => console.log('SW failed:', err));
     }
   </script>
 </body>
