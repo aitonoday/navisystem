@@ -362,7 +362,10 @@
 
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
         <b style="font-size:16px; font-weight:800;">本日のお届けコース</b>
-        <button class="btn btn-outline" style="padding:4px 10px; font-size:12px;" onclick="refreshCourses()">🔄 更新</button>
+        <div style="display:flex; gap:6px;">
+          <button class="btn btn-outline" style="padding:4px 8px; font-size:11px;" onclick="refreshCourses()">🔄 更新</button>
+          <button class="btn btn-slate" style="padding:4px 8px; font-size:11px; color:#38bdf8;" onclick="forceClearCacheAndReload()">⚡ 最新化</button>
+        </div>
       </div>
 
       <div id="courseCardsContainer">
@@ -463,12 +466,27 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <script src="firebase-sync.js"></script>
   <script>
-    // --- Service Worker ---
+    // --- Service Worker 強制更新 ---
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js').catch(err => console.log('SW registration failed:', err));
+        navigator.serviceWorker.register('sw.js?v=6').then((reg) => {
+          reg.update();
+        }).catch(err => console.log('SW registration failed:', err));
       });
     }
+
+    // キャッシュクリア＆強制リロード関数
+    window.forceClearCacheAndReload = async function() {
+      if ('caches' in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map(k => caches.delete(k)));
+      }
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        for (let r of registrations) { await r.unregister(); }
+      }
+      window.location.reload(true);
+    };
 
     const STORAGE_KEY = 'navisystem_courses';
     const PROXIMITY_THRESHOLD_METERS = 100;

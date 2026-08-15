@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lively-navi-v4';
+const CACHE_NAME = 'lively-navi-v6-ultra-compact';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
@@ -9,7 +9,7 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((keys) => {
       return Promise.all(
         keys.map((key) => {
-          return caches.delete(key); // 古いキャッシュをすべて破棄
+          return caches.delete(key); // すべての過去キャッシュを即時完全消去
         })
       );
     })
@@ -17,18 +17,9 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// 地図タイル等の外部リソースは一切妨害せずスルー
 self.addEventListener('fetch', (event) => {
-  // 同一ドメインのリクエストのみネットワーク優先で処理
-  if (event.request.method === 'GET' && event.request.url.startsWith(self.location.origin)) {
-    event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          return response;
-        })
-        .catch(() => {
-          return caches.match(event.request);
-        })
-    );
-  }
+  // キャッシュを使わず常に最新のファイルを直接サーバーから取得
+  event.respondWith(
+    fetch(event.request, { cache: 'no-store' }).catch(() => caches.match(event.request))
+  );
 });
