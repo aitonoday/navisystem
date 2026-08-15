@@ -1,24 +1,24 @@
 {
-  "name": "Lively Navi 配達ナビ",
+  "name": "LIVELY NAVI",
   "short_name": "Lively Navi",
-  "description": "ルート配送ドライバー向けナビゲーション＆運行管理システム",
+  "description": "Move Lively, Arrive Happy. ルート配送ナビゲーション＆運行管理",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#0f172a",
+  "background_color": "#f8fafc",
+  "theme_color": "#042f2e",
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
       "purpose": "any maskable"
     },
     {
-      "src": "icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "src": "logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
     }
   ]
 }

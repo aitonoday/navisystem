@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 160" width="600" height="160">
+  <defs>
+    <linearGradient id="tealGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#14b8a6"/>
+      <stop offset="100%" stop-color="#0d9488"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#0d9488" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+
+  <!-- アイコンシンボル (角丸スクエア + ナビゲーションコーン + ピン) -->
+  <g transform="translate(15, 10)" filter="url(#shadow)">
+    <rect x="0" y="0" width="140" height="140" rx="38" fill="url(#tealGrad)"/>
+    <!-- 白いナビ三角 -->
+    <path d="M 70 34 L 102 98 C 103 100, 101 103, 98 103 L 70 92 L 42 103 C 39 103, 37 100, 38 98 Z" fill="#ffffff"/>
+    <!-- コーラルピンクのアクセントポイント -->
+    <circle cx="104" cy="94" r="8" fill="#f43f5e"/>
+  </g>
+
+  <!-- ロゴテキスト -->
+  <!-- LIVELY (太字ブラック) -->
+  <text x="180" y="88" font-family="'Plus Jakarta Sans', 'Segoe UI', -apple-system, sans-serif" font-weight="900" font-size="62" fill="#0f172a" letter-spacing="-1">LIVELY</text>
+  <!-- NAVI (ティール) -->
+  <text x="410" y="88" font-family="'Plus Jakarta Sans', 'Segoe UI', -apple-system, sans-serif" font-weight="600" font-size="62" fill="#0d9488" letter-spacing="-1">NAVI</text>
+  <!-- スローガン -->
+  <text x="182" y="126" font-family="'Plus Jakarta Sans', 'Segoe UI', -apple-system, sans-serif" font-weight="500" font-size="22" fill="#64748b" letter-spacing="0.5">Move Lively, Arrive Happy.</text>
+</svg>

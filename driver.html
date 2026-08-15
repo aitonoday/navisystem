@@ -344,7 +344,7 @@
     <div id="view-course-select">
       <div class="app-header-hero">
         <div class="logo-badge-wrap">
-          <img src="logo.png" alt="LIVELY NAVI" style="max-width: 170px; width: 100%; height: auto; display: block;">
+          <img src="logo.svg" alt="LIVELY NAVI" style="max-width: 190px; width: 100%; height: auto; display: block;">
         </div>
         <div class="app-subtitle">Move Lively, Arrive Happy.</div>
       </div>
@@ -369,7 +369,7 @@
         <button class="btn btn-white" style="padding:6px 12px; font-size:12px;" onclick="exitToCourseSelect()">
           ◀ コース一覧
         </button>
-        <img src="logo.png" alt="LIVELY NAVI" style="height: 20px; display: block;">
+        <img src="logo.svg" alt="LIVELY NAVI" style="height: 22px; display: block;">
         <div style="font-size:12px; color:#0d9488; font-weight:800; background:#f0fdfa; border:1px solid #ccfbf1; padding:3px 10px; border-radius:12px;">
           <span id="navDeliveredCount">0</span>/<span id="navTotalCount">0</span> 完了
         </div>
@@ -403,15 +403,15 @@
             📝 <span id="transitMemoText">備考メモ</span>
           </div>
 
-          <!-- 3段目: 3ボタン横並び（到着・Gマップ・変更） -->
-          <div style="display:flex; gap:6px; align-items:center;">
-            <button class="btn btn-green" id="mainArrivalButton" style="flex:1.2; padding:9px 4px; font-size:13px; font-weight:900;" onclick="onArrivalClick()">
+          <!-- 3段目: 3ボタン横並び（到着・Gマップ・変更：すべて等幅同一サイズ） -->
+          <div style="display:flex; gap:8px; align-items:center;">
+            <button class="btn btn-green" id="mainArrivalButton" style="flex:1; padding:10px 4px; font-size:13px; font-weight:900;" onclick="onArrivalClick()">
               📍 到着
             </button>
-            <button class="btn btn-blue" style="flex:1; padding:9px 4px; font-size:12px; font-weight:700;" onclick="openExternalGoogleMap()">
+            <button class="btn btn-blue" style="flex:1; padding:10px 4px; font-size:13px; font-weight:700;" onclick="openExternalGoogleMap()">
               🗺️ Gマップ
             </button>
-            <button class="btn btn-slate" style="flex:0.9; padding:9px 4px; font-size:12px; font-weight:700;" onclick="openChangeDestinationModal()">
+            <button class="btn btn-slate" style="flex:1; padding:10px 4px; font-size:13px; font-weight:700;" onclick="openChangeDestinationModal()">
               🔄 変更
             </button>
           </div>
