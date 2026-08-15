@@ -55,6 +55,8 @@
     .btn-blue:hover { background: #1d4ed8; }
     .btn-green { background: #16a34a; color: #fff; }
     .btn-green:hover { background: #15803d; }
+    .btn-amber { background: #d97706; color: #fff; }
+    .btn-amber:hover { background: #b45309; }
     .btn-slate { background: #334155; color: #f8fafc; }
     .btn-slate:hover { background: #475569; }
     .btn-red { background: #dc2626; color: #fff; }
@@ -64,6 +66,7 @@
       display: flex;
       flex: 1;
       overflow: hidden;
+      position: relative;
     }
 
     /* 左パネル：コース管理 & CSV取込 */
@@ -73,6 +76,7 @@
       border-right: 1px solid #334155;
       display: flex;
       flex-direction: column;
+      z-index: 10;
     }
     .panel-tabs {
       display: flex;
@@ -203,6 +207,54 @@
       font-size: 12px;
     }
 
+    /* ルート検索ツールバー（地図上フローティング） */
+    #route-planner-bar {
+      position: absolute;
+      top: 16px;
+      left: 436px;
+      right: 16px;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid #334155;
+      backdrop-filter: blur(8px);
+      border-radius: 12px;
+      padding: 12px 18px;
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      flex-wrap: wrap;
+    }
+    .route-select-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      flex: 1;
+      min-width: 200px;
+    }
+    .route-select-item select {
+      flex: 1;
+      padding: 6px 10px;
+      background: #1e293b;
+      border: 1px solid #475569;
+      color: #f8fafc;
+      border-radius: 6px;
+      font-size: 12px;
+    }
+    #routeInfoPill {
+      display: none;
+      align-items: center;
+      gap: 12px;
+      background: #1e293b;
+      padding: 4px 12px;
+      border-radius: 20px;
+      border: 1px solid #38bdf8;
+      font-size: 12px;
+      color: #38bdf8;
+      font-weight: bold;
+    }
+
     /* 右パネル：マップ */
     #map {
       flex: 1;
@@ -221,11 +273,49 @@
       <a href="driver.html" target="_blank" class="btn btn-blue">
         📱 スマホドライバー画面を開く ↗
       </a>
-      <button id="btnExportAll" class="btn btn-slate">💾 全データ保存</button>
+      <button id="btnExportAll" class="btn btn-slate" onclick="exportDataBackup()">💾 データ出力</button>
     </div>
   </div>
 
   <div id="container">
+    <!-- ルート描画フローティングバー -->
+    <div id="route-planner-bar">
+      <div style="font-weight:bold; font-size:13px; color:#38bdf8; display:flex; align-items:center; gap:6px;">
+        <span>🗺️ 区間ルート描画:</span>
+      </div>
+
+      <div class="route-select-item">
+        <span>🚩 <b>A (出発)</b>:</span>
+        <select id="routeFromSelect">
+          <option value="">-- ピンまたはリストから選択 --</option>
+        </select>
+      </div>
+
+      <div class="route-select-item">
+        <span>🏁 <b>B (到着)</b>:</span>
+        <select id="routeToSelect">
+          <option value="">-- ピンまたはリストから選択 --</option>
+        </select>
+      </div>
+
+      <div style="display:flex; gap:8px; align-items:center;">
+        <button class="btn btn-blue" style="padding:6px 14px;" onclick="calculateAndDrawRoute()">
+          🚀 ルート描画
+        </button>
+        <button class="btn btn-slate" style="padding:6px 10px;" onclick="clearDrawnRoute()">
+          ✕ 解除
+        </button>
+      </div>
+
+      <div id="routeInfoPill">
+        <span>📏 <span id="routeDistanceText">0 km</span></span>
+        <span>⏱️ <span id="routeDurationText">0 分</span></span>
+        <button class="btn btn-amber" style="padding:2px 8px; font-size:11px;" onclick="saveCurrentDrawnRouteAsGeoJson()">
+          💾 固定ルートとして保存
+        </button>
+      </div>
+    </div>
+
     <!-- 左パネル -->
     <div id="left-panel">
       <div class="panel-tabs">
@@ -290,6 +380,10 @@
 
     let activeMarkers = [];
     let currentParsedItems = [];
+    let activeLoadedItems = []; // 現在地図上に表示されている配達先
+    let currentDrawnRouteLayer = null;
+    let lastCalculatedGeoJson = null;
+
     const STORAGE_KEY = 'navisystem_courses';
 
     // --- ストレージ管理 ---
@@ -315,6 +409,8 @@
       if (tabId === 'import') {
         document.querySelectorAll('.tab-btn')[0].classList.add('active');
         document.getElementById('tab-import').classList.add('active');
+        activeLoadedItems = currentParsedItems;
+        updateRouteDropdowns();
       } else {
         document.querySelectorAll('.tab-btn')[1].classList.add('active');
         document.getElementById('tab-courses').classList.add('active');
@@ -391,6 +487,7 @@
       if (addrIndex === -1) addrIndex = 1;
 
       clearMap();
+      clearDrawnRoute();
       currentParsedItems = [];
       document.getElementById('importSettings').style.display = 'block';
       document.getElementById('courseNameInput').value = `${new Date().toLocaleDateString()} 配達便 (${rows.length - 1}件)`;
@@ -429,9 +526,10 @@
       document.getElementById('geocodeSuccessCount').innerText = successCount;
       document.getElementById('geocodeTotalCount').innerText = currentParsedItems.length;
 
-      // プレビュー描画
+      activeLoadedItems = currentParsedItems;
       renderPreviewList();
       plotItemsOnMap(currentParsedItems);
+      updateRouteDropdowns();
     }
 
     function parseCSV(text) {
@@ -536,7 +634,9 @@
         card.onclick = () => {
           document.querySelectorAll('.course-card').forEach(c => c.classList.remove('selected'));
           card.classList.add('selected');
+          activeLoadedItems = course.items;
           plotItemsOnMap(course.items);
+          updateRouteDropdowns();
         };
 
         listEl.appendChild(card);
@@ -550,6 +650,7 @@
       courses = courses.filter(c => c.id !== courseId);
       saveCourses(courses);
       clearMap();
+      clearDrawnRoute();
     };
 
     function clearMap() {
@@ -563,7 +664,7 @@
 
       items.forEach(item => {
         const marker = L.circleMarker([item.lat, item.lng], {
-          radius: 8,
+          radius: 9,
           fillColor: item.isDone ? "#16a34a" : "#2563eb",
           color: "#fff",
           weight: 2,
@@ -571,18 +672,151 @@
         }).addTo(map);
 
         marker.bindPopup(`
-          <b style="font-size:13px;">#${item.id} ${item.name}</b><br>
-          <span style="font-size:11px; color:#64748b;">${item.address}</span><br>
-          ${item.time ? `<span style="font-size:11px; color:#2563eb;">🕒 ${item.time}</span><br>` : ''}
-          ${item.memo ? `<span style="font-size:11px; color:#f59e0b;">📝 ${item.memo}</span>` : ''}
+          <div style="min-width:180px; font-size:12px;">
+            <b style="font-size:13px;">#${item.id} ${item.name}</b><br>
+            <span style="color:#64748b;">${item.address}</span><br>
+            ${item.time ? `<span style="color:#2563eb;">🕒 ${item.time}</span><br>` : ''}
+            ${item.memo ? `<span style="color:#f59e0b;">📝 ${item.memo}</span><br>` : ''}
+            <div style="display:flex; gap:6px; margin-top:8px;">
+              <button class="btn btn-blue" style="flex:1; padding:4px 6px; font-size:11px;" onclick="setRoutePoint('from', ${item.id})">🚩 A(出発)</button>
+              <button class="btn btn-green" style="flex:1; padding:4px 6px; font-size:11px;" onclick="setRoutePoint('to', ${item.id})">🏁 B(到着)</button>
+            </div>
+          </div>
         `);
 
         activeMarkers.push(marker);
       });
 
       const group = new L.featureGroup(activeMarkers);
-      map.fitBounds(group.getBounds(), { padding: [30, 30] });
+      map.fitBounds(group.getBounds(), { padding: [40, 40] });
     }
+
+    // --- 区間ルート描画機能 (Aさん ➔ Bさん) ---
+    function updateRouteDropdowns() {
+      const fromSel = document.getElementById('routeFromSelect');
+      const toSel = document.getElementById('routeToSelect');
+      
+      const prevFrom = fromSel.value;
+      const prevTo = toSel.value;
+
+      fromSel.innerHTML = '<option value="">-- 出発地を選択 (A) --</option>';
+      toSel.innerHTML = '<option value="">-- 目的地を選択 (B) --</option>';
+
+      activeLoadedItems.forEach(it => {
+        const label = `#${it.id} ${it.name} (${it.address.slice(0, 10)}...)`;
+        fromSel.add(new Option(label, it.id));
+        toSel.add(new Option(label, it.id));
+      });
+
+      if (prevFrom) fromSel.value = prevFrom;
+      if (prevTo) toSel.value = prevTo;
+
+      // 2件以上あればデフォルトで1番目と2番目をセット
+      if (activeLoadedItems.length >= 2 && !fromSel.value && !toSel.value) {
+        fromSel.value = activeLoadedItems[0].id;
+        toSel.value = activeLoadedItems[1].id;
+      }
+    }
+
+    window.setRoutePoint = function(type, id) {
+      if (type === 'from') {
+        document.getElementById('routeFromSelect').value = id;
+      } else {
+        document.getElementById('routeToSelect').value = id;
+      }
+      map.closePopup();
+
+      // 両方セットされていれば自動計算
+      const fromId = document.getElementById('routeFromSelect').value;
+      const toId = document.getElementById('routeToSelect').value;
+      if (fromId && toId && fromId !== toId) {
+        calculateAndDrawRoute();
+      }
+    };
+
+    window.calculateAndDrawRoute = async function() {
+      const fromId = parseInt(document.getElementById('routeFromSelect').value);
+      const toId = parseInt(document.getElementById('routeToSelect').value);
+
+      if (!fromId || !toId) return alert("出発地(A)と目的地(B)の両方を選択してください。");
+      if (fromId === toId) return alert("出発地と目的地が同じです。異なる地点を選択してください。");
+
+      const itemA = activeLoadedItems.find(i => i.id === fromId);
+      const itemB = activeLoadedItems.find(i => i.id === toId);
+
+      if (!itemA || !itemB) return alert("指定された配達先が見つかりません。");
+
+      const url = `https://router.project-osrm.org/route/v1/driving/${itemA.lng},${itemA.lat};${itemB.lng},${itemB.lat}?overview=full&geometries=geojson`;
+
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+
+        if (data.routes && data.routes.length > 0) {
+          const route = data.routes[0];
+          clearDrawnRoute();
+
+          // ルートライン描画 (太いグラデーション風オレンジ・青)
+          currentDrawnRouteLayer = L.geoJSON(route.geometry, {
+            style: {
+              color: '#38bdf8',
+              weight: 6,
+              opacity: 0.9,
+              dashArray: '8, 8'
+            }
+          }).addTo(map);
+
+          map.fitBounds(currentDrawnRouteLayer.getBounds(), { padding: [60, 60] });
+
+          // 距離・時間表示
+          const distKm = (route.distance / 1000).toFixed(2);
+          const durMin = Math.round(route.duration / 60);
+
+          document.getElementById('routeDistanceText').innerText = `${distKm} km`;
+          document.getElementById('routeDurationText').innerText = `${durMin} 分`;
+          document.getElementById('routeInfoPill').style.display = 'inline-flex';
+
+          lastCalculatedGeoJson = {
+            type: "Feature",
+            properties: {
+              route_name: `${itemA.name} ➔ ${itemB.name}`,
+              from_id: itemA.id,
+              from_name: itemA.name,
+              to_id: itemB.id,
+              to_name: itemB.name,
+              distance_km: parseFloat(distKm),
+              duration_min: durMin,
+              created_at: new Date().toISOString()
+            },
+            geometry: route.geometry
+          };
+        } else {
+          alert("経路が見つかりませんでした。");
+        }
+      } catch (err) {
+        console.error(err);
+        alert("経路探索APIへの通信に失敗しました。");
+      }
+    };
+
+    window.clearDrawnRoute = function() {
+      if (currentDrawnRouteLayer) {
+        map.removeLayer(currentDrawnRouteLayer);
+        currentDrawnRouteLayer = null;
+      }
+      lastCalculatedGeoJson = null;
+      document.getElementById('routeInfoPill').style.display = 'none';
+    };
+
+    window.saveCurrentDrawnRouteAsGeoJson = function() {
+      if (!lastCalculatedGeoJson) return alert("保存するルートがありません");
+      const blob = new Blob([JSON.stringify(lastCalculatedGeoJson, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `route_${lastCalculatedGeoJson.properties.from_name}_to_${lastCalculatedGeoJson.properties.to_name}.geojson`;
+      a.click();
+      alert("✅ 固定区間ルートをGeoJSONファイルとしてダウンロードしました！");
+    };
 
     // --- サンプルコース投入 ---
     window.loadSampleCourses = function() {
