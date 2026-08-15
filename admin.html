@@ -705,13 +705,14 @@
       if (rows.length < 2) return alert("有効なCSVデータがありません。");
 
       const header = rows[0].map(h => h.trim());
+      let orderIndex = header.findIndex(h => h.includes('順') || h.includes('No') || h.includes('no') || h.includes('Seq') || h.includes('seq') || h.includes('番号'));
       let nameIndex = header.findIndex(h => h.includes('名前') || h.includes('氏名') || h.includes('顧客') || h.includes('宛先'));
       let addrIndex = header.findIndex(h => h.includes('住所') || h.includes('お届け先') || h.includes('送付先') || h.includes('場所'));
       let timeIndex = header.findIndex(h => h.includes('時間') || h.includes('指定'));
       let memoIndex = header.findIndex(h => h.includes('メモ') || h.includes('備考') || h.includes('注意'));
 
-      if (nameIndex === -1) nameIndex = 0;
-      if (addrIndex === -1) addrIndex = 1;
+      if (nameIndex === -1) nameIndex = orderIndex === 0 ? 1 : 0;
+      if (addrIndex === -1) addrIndex = nameIndex === 1 ? 2 : 1;
 
       clearMap();
       clearDrawnRoute();
@@ -728,6 +729,7 @@
         const row = rows[i];
         if (!row || row.length <= addrIndex) continue;
 
+        const orderVal = orderIndex !== -1 && row[orderIndex] ? parseInt(row[orderIndex]) : i;
         const name = row[nameIndex] || `配達先 ${i}`;
         const address = row[addrIndex] || "";
         const time = timeIndex !== -1 ? row[timeIndex] : "";
@@ -736,7 +738,8 @@
 
         const coords = await geocodeAddress(address);
         const item = {
-          id: currentParsedItems.length + 1,
+          id: i,
+          order: isNaN(orderVal) ? i : orderVal,
           name: name,
           address: address,
           time: time,
@@ -750,6 +753,9 @@
         currentParsedItems.push(item);
         if (coords) successCount++;
       }
+
+      // 配達順でソート
+      currentParsedItems.sort((a, b) => a.order - b.order);
 
       document.getElementById('geocodeSuccessCount').innerText = successCount;
       document.getElementById('geocodeTotalCount').innerText = currentParsedItems.length;

@@ -31,12 +31,12 @@
 
     /* 共通ボタン */
     .btn {
-      padding: 10px 16px;
+      padding: 10px 14px;
       border: none;
       border-radius: 8px;
       font-weight: bold;
       cursor: pointer;
-      font-size: 14px;
+      font-size: 13px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -44,9 +44,14 @@
       transition: all 0.2s;
     }
     .btn-blue { background: #2563eb; color: #fff; }
+    .btn-blue:active { background: #1d4ed8; transform: scale(0.98); }
     .btn-green { background: #16a34a; color: #fff; }
-    .btn-red { background: #dc2626; color: #fff; }
+    .btn-green:active { background: #15803d; transform: scale(0.98); }
+    .btn-amber { background: #d97706; color: #fff; }
+    .btn-amber:active { background: #b45309; transform: scale(0.98); }
     .btn-slate { background: #334155; color: #f8fafc; }
+    .btn-slate:active { background: #475569; }
+    .btn-red { background: #dc2626; color: #fff; }
     .btn-outline { background: transparent; border: 1px solid #475569; color: #94a3b8; }
 
     /* --- 1. コース選択ビュー --- */
@@ -59,7 +64,7 @@
     }
     .app-header-hero {
       text-align: center;
-      margin: 16px 0 24px;
+      margin: 16px 0 20px;
     }
     .app-title {
       font-size: 24px;
@@ -106,12 +111,12 @@
       border-radius: 8px;
     }
 
-    /* PWAインストール案内バナー */
+    /* PWA案内バナー */
     #pwa-banner {
       background: #172554;
       border: 1px solid #2563eb;
       border-radius: 10px;
-      padding: 12px;
+      padding: 10px 14px;
       margin-bottom: 16px;
       font-size: 12px;
       color: #93c5fd;
@@ -139,15 +144,16 @@
       z-index: 1000;
     }
     .nav-course-title {
-      font-size: 14px;
+      font-size: 13px;
       font-weight: bold;
       color: #f8fafc;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      max-width: 180px;
+      max-width: 150px;
     }
 
+    /* メインマップエリア */
     #map-container {
       flex: 1;
       position: relative;
@@ -157,11 +163,90 @@
       height: 100%;
     }
 
+    /* 🚚 現在のお届け先ターゲットカード (画面上部フローティング) */
+    #current-target-card {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      right: 12px;
+      background: rgba(15, 23, 42, 0.96);
+      border: 2px solid #38bdf8;
+      backdrop-filter: blur(10px);
+      border-radius: 14px;
+      padding: 14px;
+      z-index: 1000;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+      animation: slideDown 0.3s ease-out;
+    }
+    @keyframes slideDown {
+      from { transform: translateY(-20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .target-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    .target-badge {
+      background: #0284c7;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .target-name {
+      font-size: 17px;
+      font-weight: 900;
+      color: #f8fafc;
+    }
+    .target-address {
+      font-size: 12px;
+      color: #94a3b8;
+      margin: 4px 0 6px;
+    }
+    .target-memo-box {
+      background: #1e293b;
+      border-left: 3px solid #f59e0b;
+      padding: 6px 10px;
+      font-size: 11px;
+      color: #fbbf24;
+      border-radius: 0 6px 6px 0;
+      margin-bottom: 10px;
+    }
+
+    .target-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .target-btn-done {
+      flex: 1.4;
+      padding: 12px;
+      font-size: 14px;
+      background: #16a34a;
+      color: #fff;
+      border-radius: 8px;
+    }
+    .target-btn-skip {
+      flex: 1;
+      padding: 12px;
+      font-size: 13px;
+      background: #475569;
+      color: #f8fafc;
+      border-radius: 8px;
+    }
+
     /* 下部 配達リストシート */
     #bottom-sheet {
       background: #1e293b;
       border-top: 1px solid #334155;
-      height: 220px;
+      height: 140px;
       display: flex;
       flex-direction: column;
       transition: height 0.3s;
@@ -179,11 +264,11 @@
       cursor: pointer;
     }
     .sheet-header {
-      padding: 6px 14px 10px;
+      padding: 4px 14px 8px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      font-size: 13px;
+      font-size: 12px;
       font-weight: bold;
       border-bottom: 1px solid #334155;
     }
@@ -201,17 +286,22 @@
       padding: 10px 12px;
       margin-bottom: 8px;
       font-size: 13px;
+      transition: all 0.2s;
+    }
+    .delivery-card-phone.is-current-target {
+      border: 2px solid #38bdf8;
+      background: #0c4a6e;
     }
     .delivery-card-phone.completed {
       background: #064e3b;
       border-color: #059669;
-      opacity: 0.8;
+      opacity: 0.75;
     }
 
     /* GPSトラッキング通知バー */
     #tracking-pill {
       position: absolute;
-      top: 12px;
+      bottom: 150px;
       left: 50%;
       transform: translateX(-50%);
       background: rgba(15, 23, 42, 0.95);
@@ -253,31 +343,62 @@
 
   <!-- ================= 画面2: 運行・ナビ画面 ================= -->
   <div id="view-nav-main">
+    <!-- ナビ上部ヘッダー -->
     <div id="nav-header">
-      <button class="btn btn-slate" style="padding:6px 10px; font-size:12px;" onclick="exitToCourseSelect()">
+      <button class="btn btn-slate" style="padding:4px 8px; font-size:11px;" onclick="exitToCourseSelect()">
         ◀ コース一覧
       </button>
       <div class="nav-course-title" id="currentCourseTitle">コース名</div>
-      <div style="font-size:12px; color:#38bdf8;">
+      <div style="font-size:12px; color:#38bdf8; font-weight:bold;">
         <span id="navDeliveredCount">0</span>/<span id="navTotalCount">0</span> 完了
       </div>
     </div>
 
+    <!-- マップ & フローティングターゲットカード -->
     <div id="map-container">
+      <!-- 🚚 現在のお届け先カード -->
+      <div id="current-target-card">
+        <div class="target-header">
+          <div class="target-badge">
+            <span>📍 配達順 #<span id="targetOrderNum">1</span></span>
+          </div>
+          <span id="targetTimeBadge" style="font-size:12px; color:#38bdf8; font-weight:bold;">指定なし</span>
+        </div>
+
+        <div class="target-name" id="targetName">配達先 氏名</div>
+        <div class="target-address" id="targetAddress">奈良県奈良市...</div>
+        <div class="target-memo-box" id="targetMemoBox" style="display:none;">
+          📝 <span id="targetMemoText">置き配指定など</span>
+        </div>
+
+        <div class="target-actions">
+          <button class="btn btn-blue" style="padding:10px 12px;" onclick="navigateCurrentTarget()">
+            🗺️ 案内
+          </button>
+          <button class="btn target-btn-done" onclick="completeCurrentAndAdvance()">
+            ✅ 配達完了 ➔ 次へ
+          </button>
+          <button class="btn target-btn-skip" onclick="skipCurrentTarget()">
+            ⏭ 飛ばす
+          </button>
+        </div>
+      </div>
+
       <div id="map"></div>
+
       <div id="tracking-pill">
         🔴 <b>GPS運行記録中</b> (<span id="gpsPointCount">0</span>点)
       </div>
     </div>
 
-    <!-- 下部シート -->
+    <!-- 下部シート（全リスト & 操作） -->
     <div id="bottom-sheet">
       <div class="sheet-handle" onclick="toggleSheet()"></div>
       <div class="sheet-header">
-        <span>配達先リスト (<span id="sheetDoneCount">0</span>/<span id="sheetTotalCount">0</span>)</span>
+        <span onclick="toggleSheet()" style="cursor:pointer;">📋 配達順一覧 (<span id="sheetDoneCount">0</span>/<span id="sheetTotalCount">0</span> 完了) ▲</span>
         <div style="display:flex; gap:6px;">
-          <button id="btnGpsToggle" class="btn btn-green" style="padding:4px 10px; font-size:11px;" onclick="toggleGpsTracking()">
-            ▶ GPS記録開始
+          <button id="btnGpsToggle" class="btn btn-green" style="padding:4px 8px; font-size:11px;" onclick="toggleGpsTracking()">
+            ▶ GPS記録
           </button>
         </div>
       </div>
@@ -296,6 +417,7 @@
 
     const STORAGE_KEY = 'navisystem_courses';
     let currentCourse = null;
+    let currentTargetIndex = 0; // 現在フォーカス中のインデックス
     let map = null;
     let markers = [];
     let currentNavLayer = null;
@@ -313,7 +435,6 @@
         if (raw) return JSON.parse(raw);
       } catch (e) {}
 
-      // 初回サンプルコース
       return [
         {
           id: 'sample_today',
@@ -321,10 +442,10 @@
           memo: '担当: ドライバーA / ルート001',
           createdAt: new Date().toISOString(),
           items: [
-            { id: 1, name: "田中 太郎", address: "奈良県奈良市登大路町30", time: "午前中", memo: "置き配可（玄関前）", lat: 34.685062, lng: 135.832809, isDone: false },
-            { id: 2, name: "佐藤 次郎", address: "奈良県生駒市北新町10-38", time: "14:00-16:00", memo: "オートロック暗証1234", lat: 34.694481, lng: 135.697067, isDone: false },
-            { id: 3, name: "鈴木 三郎", address: "奈良県大和高田市大中100", time: "18:00-20:00", memo: "不在時宅配BOX", lat: 34.515060, lng: 135.737167, isDone: false },
-            { id: 4, 高橋: "高橋 四郎", name: "高橋 四郎", address: "奈良県奈良市三条栄町", time: "指定なし", memo: "道幅狭小注意", lat: 34.680706, lng: 135.808823, isDone: false }
+            { id: 1, order: 1, name: "田中 太郎", address: "奈良県奈良市登大路町30", time: "午前中", memo: "置き配可（玄関前）", lat: 34.685062, lng: 135.832809, isDone: false },
+            { id: 2, order: 2, name: "高橋 四郎", address: "奈良県奈良市三条栄町", time: "指定なし", memo: "道幅狭小注意", lat: 34.680706, lng: 135.808823, isDone: false },
+            { id: 3, order: 3, name: "佐藤 次郎", address: "奈良県生駒市北新町10-38", time: "14:00-16:00", memo: "オートロック暗証1234", lat: 34.694481, lng: 135.697067, isDone: false },
+            { id: 4, order: 4, name: "鈴木 三郎", address: "奈良県大和高田市大中100", time: "18:00-20:00", memo: "不在時宅配BOX", lat: 34.515060, lng: 135.737167, isDone: false }
           ]
         }
       ];
@@ -363,7 +484,7 @@
             <span>件数: <b>${totalCount}件</b></span>
             <span style="color:#38bdf8;">進捗: <b>${doneCount}/${totalCount}</b> (${percent}%)</span>
           </div>
-          <button class="btn btn-blue" style="width:100%;" onclick="startDeliveryCourse('${course.id}')">
+          <button class="btn btn-blue" style="width:100%; font-size:15px; padding:12px;" onclick="startDeliveryCourse('${course.id}')">
             🚚 このコースで配送開始
           </button>
         `;
@@ -377,11 +498,19 @@
       currentCourse = courses.find(c => c.id === courseId);
       if (!currentCourse) return alert("コースが見つかりません");
 
+      // 配達順でソートを保証
+      currentCourse.items.sort((a, b) => (a.order || a.id) - (b.order || b.id));
+
+      // 最初の未配達先を探す
+      const firstUndoneIdx = currentCourse.items.findIndex(it => !it.isDone);
+      currentTargetIndex = firstUndoneIdx !== -1 ? firstUndoneIdx : 0;
+
       document.getElementById('view-course-select').style.display = 'none';
       document.getElementById('view-nav-main').style.display = 'flex';
       document.getElementById('currentCourseTitle').innerText = currentCourse.name;
 
       initMap();
+      updateTargetCard();
       renderDeliveryList();
     };
 
@@ -395,7 +524,128 @@
       refreshCourses();
     };
 
-    // --- マップ初期化 ---
+    // --- ターゲットカード更新 & 自動フォーカス ---
+    function updateTargetCard() {
+      if (!currentCourse || currentCourse.items.length === 0) return;
+
+      const card = document.getElementById('current-target-card');
+      const item = currentCourse.items[currentTargetIndex];
+
+      const allDone = currentCourse.items.every(i => i.isDone);
+      if (allDone) {
+        card.innerHTML = `
+          <div style="text-align:center; padding:10px 0;">
+            <div style="font-size:24px; margin-bottom:4px;">🎉</div>
+            <b style="font-size:16px; color:#4ade80;">本日の配達がすべて完了しました！</b>
+            <div style="font-size:12px; color:#94a3b8; margin-top:4px;">お疲れ様でした。コース一覧へ戻れます。</div>
+          </div>
+        `;
+        plotMarkers();
+        return;
+      }
+
+      document.getElementById('targetOrderNum').innerText = item.order || (currentTargetIndex + 1);
+      document.getElementById('targetName').innerText = item.name;
+      document.getElementById('targetAddress').innerText = item.address;
+      document.getElementById('targetTimeBadge').innerText = item.time || '指定なし';
+
+      const memoBox = document.getElementById('targetMemoBox');
+      if (item.memo) {
+        memoBox.style.display = 'block';
+        document.getElementById('targetMemoText').innerText = item.memo;
+      } else {
+        memoBox.style.display = 'none';
+      }
+
+      plotMarkers();
+
+      // 地図の中心を現在ターゲットへ
+      if (map) {
+        map.setView([item.lat, item.lng], 16, { animate: true });
+      }
+    }
+
+    // --- 配達完了 ➔ 自動で次の配達先へ進む ---
+    window.completeCurrentAndAdvance = function() {
+      const item = currentCourse.items[currentTargetIndex];
+      if (!item) return;
+
+      item.isDone = true;
+      saveCourseState();
+
+      // 次の未配達先を探す
+      let nextIdx = -1;
+      for (let i = currentTargetIndex + 1; i < currentCourse.items.length; i++) {
+        if (!currentCourse.items[i].isDone) {
+          nextIdx = i;
+          break;
+        }
+      }
+      // 後半になければ最初から探す（飛ばした先など）
+      if (nextIdx === -1) {
+        for (let i = 0; i < currentCourse.items.length; i++) {
+          if (!currentCourse.items[i].isDone) {
+            nextIdx = i;
+            break;
+          }
+        }
+      }
+
+      if (nextIdx !== -1) {
+        currentTargetIndex = nextIdx;
+      }
+
+      updateTargetCard();
+      renderDeliveryList();
+    };
+
+    // --- 飛ばす（後回しにして次の配達先へ） ---
+    window.skipCurrentTarget = function() {
+      let nextIdx = -1;
+      for (let i = currentTargetIndex + 1; i < currentCourse.items.length; i++) {
+        if (!currentCourse.items[i].isDone) {
+          nextIdx = i;
+          break;
+        }
+      }
+      if (nextIdx === -1) {
+        for (let i = 0; i < currentTargetIndex; i++) {
+          if (!currentCourse.items[i].isDone) {
+            nextIdx = i;
+            break;
+          }
+        }
+      }
+
+      if (nextIdx !== -1 && nextIdx !== currentTargetIndex) {
+        currentTargetIndex = nextIdx;
+        updateTargetCard();
+        renderDeliveryList();
+      } else {
+        alert("他に未配達の先がありません。");
+      }
+    };
+
+    // --- 任意の配達先に切り替え（割り込み） ---
+    window.setAsCurrentTarget = function(idx) {
+      currentTargetIndex = idx;
+      updateTargetCard();
+      renderDeliveryList();
+      if (document.getElementById('bottom-sheet').classList.contains('expanded')) {
+        toggleSheet();
+      }
+    };
+
+    function saveCourseState() {
+      const courses = getCourses();
+      const idx = courses.findIndex(c => c.id === currentCourse.id);
+      if (idx !== -1) {
+        courses[idx] = currentCourse;
+        saveCourses(courses);
+      }
+    }
+
+    // --- マップ初期化 & ピン描画 ---
     function initMap() {
       if (!map) {
         map = L.map('map', { zoomControl: false }).setView([34.685, 135.805], 13);
@@ -407,66 +657,54 @@
         L.control.zoom({ position: 'topright' }).addTo(map);
       }
       setTimeout(() => map.invalidateSize(), 200);
-      plotMarkers();
     }
 
     function plotMarkers() {
+      if (!map) return;
       markers.forEach(m => map.removeLayer(m));
       markers = [];
 
-      currentCourse.items.forEach(item => {
+      currentCourse.items.forEach((item, idx) => {
+        const isTarget = (idx === currentTargetIndex && !item.isDone);
+
+        // マーカー作成（ターゲットは黄金色・特大）
         const marker = L.circleMarker([item.lat, item.lng], {
-          radius: 10,
-          fillColor: item.isDone ? "#16a34a" : "#2563eb",
+          radius: isTarget ? 14 : 9,
+          fillColor: item.isDone ? "#16a34a" : (isTarget ? "#f59e0b" : "#2563eb"),
           color: "#ffffff",
-          weight: 2,
-          fillOpacity: 0.95
+          weight: isTarget ? 3 : 2,
+          fillOpacity: 1
         }).addTo(map);
 
         const popupHtml = `
-          <div style="min-width:170px; font-size:12px;">
-            <b style="font-size:14px;">#${item.id} ${item.name}</b><br>
+          <div style="min-width:180px; font-size:12px;">
+            <b style="font-size:14px;">#${item.order || (idx + 1)} ${item.name}</b><br>
             <span style="color:#64748b;">${item.address}</span><br>
             ${item.time ? `<span style="color:#2563eb;">🕒 ${item.time}</span><br>` : ''}
             ${item.memo ? `<span style="color:#d97706;">📝 ${item.memo}</span><br>` : ''}
             <div style="display:flex; gap:6px; margin-top:8px;">
-              <button class="btn btn-blue" style="flex:1; padding:6px;" onclick="navigateToTarget(${item.id})">案内</button>
-              <button class="btn btn-green" style="flex:1; padding:6px;" onclick="toggleDeliveryDone(${item.id})">${item.isDone ? '未完' : '完了'}</button>
+              <button class="btn btn-blue" style="flex:1; padding:6px;" onclick="setAsCurrentTarget(${idx})">🎯 ここへ行く</button>
+              <button class="btn btn-green" style="flex:1; padding:6px;" onclick="toggleItemDone(${idx})">${item.isDone ? '未完' : '完了'}</button>
             </div>
           </div>
         `;
         marker.bindPopup(popupHtml);
         markers.push(marker);
       });
-
-      if (markers.length > 0) {
-        const group = new L.featureGroup(markers);
-        map.fitBounds(group.getBounds(), { padding: [40, 40] });
-      }
     }
 
-    // --- 配達完了切り替え ---
-    window.toggleDeliveryDone = function(id) {
-      const item = currentCourse.items.find(it => it.id === id);
+    window.toggleItemDone = function(idx) {
+      const item = currentCourse.items[idx];
       if (!item) return;
-
       item.isDone = !item.isDone;
-
-      // ストレージ更新
-      const courses = getCourses();
-      const idx = courses.findIndex(c => c.id === currentCourse.id);
-      if (idx !== -1) {
-        courses[idx] = currentCourse;
-        saveCourses(courses);
-      }
-
-      plotMarkers();
+      saveCourseState();
+      updateTargetCard();
       renderDeliveryList();
     };
 
-    // --- ナビゲーション (OSRM + Google Maps) ---
-    window.navigateToTarget = function(id) {
-      const target = currentCourse.items.find(it => it.id === id);
+    // --- ナビ案内 ---
+    window.navigateCurrentTarget = function() {
+      const target = currentCourse.items[currentTargetIndex];
       if (!target) return;
 
       if (!navigator.geolocation) {
@@ -485,9 +723,9 @@
           if (data.routes && data.routes.length > 0) {
             if (currentNavLayer) map.removeLayer(currentNavLayer);
             currentNavLayer = L.geoJSON(data.routes[0].geometry, {
-              style: { color: '#f59e0b', weight: 6, dashArray: '4, 8' }
+              style: { color: '#f59e0b', weight: 6, dashArray: '6, 8' }
             }).addTo(map);
-            map.fitBounds(currentNavLayer.getBounds(), { padding: [50, 50] });
+            map.fitBounds(currentNavLayer.getBounds(), { padding: [80, 80] });
           }
         } catch (e) {
           window.open(`https://www.google.com/maps/dir/?api=1&destination=${target.lat},${target.lng}`);
@@ -510,21 +748,22 @@
       const listEl = document.getElementById('deliveryCardsList');
       listEl.innerHTML = '';
 
-      currentCourse.items.forEach(item => {
+      currentCourse.items.forEach((item, idx) => {
+        const isCurrent = (idx === currentTargetIndex && !item.isDone);
         const card = document.createElement('div');
-        card.className = `delivery-card-phone ${item.isDone ? 'completed' : ''}`;
+        card.className = `delivery-card-phone ${item.isDone ? 'completed' : ''} ${isCurrent ? 'is-current-target' : ''}`;
         card.innerHTML = `
           <div style="display:flex; justify-content:space-between; align-items:center;">
-            <b>#${item.id} ${item.name}</b>
-            <span style="font-size:11px; padding:2px 6px; border-radius:4px; background:${item.isDone ? '#10b981' : '#3b82f6'}; color:#fff;">
-              ${item.isDone ? '配達完了' : (item.time || '指定なし')}
+            <b>#${item.order || (idx + 1)} ${item.name}</b>
+            <span style="font-size:11px; padding:2px 6px; border-radius:4px; background:${item.isDone ? '#10b981' : (isCurrent ? '#f59e0b' : '#3b82f6')}; color:#fff; font-weight:bold;">
+              ${item.isDone ? '完了' : (isCurrent ? '🎯 次のお届け' : (item.time || '指定なし'))}
             </span>
           </div>
           <div style="color:#94a3b8; font-size:11px; margin:4px 0;">${item.address}</div>
-          ${item.memo ? `<div style="color:#f59e0b; font-size:11px; margin-bottom:6px;">📝 ${item.memo}</div>` : ''}
-          <div style="display:flex; gap:8px; margin-top:6px;">
-            <button class="btn btn-blue" style="flex:1; padding:6px 8px; font-size:12px;" onclick="navigateToTarget(${item.id})">🗺️ 案内</button>
-            <button class="btn btn-green" style="flex:1; padding:6px 8px; font-size:12px;" onclick="toggleDeliveryDone(${item.id})">${item.isDone ? '↩ 未完了に戻す' : '✅ 完了'}</button>
+          ${item.memo ? `<div style="color:#fbbf24; font-size:11px; margin-bottom:4px;">📝 ${item.memo}</div>` : ''}
+          <div style="display:flex; gap:6px; margin-top:6px;">
+            <button class="btn btn-blue" style="flex:1; padding:6px; font-size:11px;" onclick="setAsCurrentTarget(${idx})">🎯 ここへ行く</button>
+            <button class="btn btn-green" style="flex:1; padding:6px; font-size:11px;" onclick="toggleItemDone(${idx})">${item.isDone ? '↩ 未完' : '✅ 完了'}</button>
           </div>
         `;
         listEl.appendChild(card);
@@ -546,7 +785,7 @@
         if (!navigator.geolocation) return alert("GPSが利用できません");
         isGpsRecording = true;
         recordedLogs = [];
-        btn.innerText = "⏹ 運行終了・保存";
+        btn.innerText = "⏹ 運行終了";
         btn.className = "btn btn-red";
         pill.style.display = "block";
 
@@ -562,13 +801,12 @@
       } else {
         navigator.geolocation.clearWatch(gpsWatchId);
         isGpsRecording = false;
-        btn.innerText = "▶ GPS記録開始";
+        btn.innerText = "▶ GPS記録";
         btn.className = "btn btn-green";
         pill.style.display = "none";
 
         if (recordedLogs.length < 5) return alert("記録されたログが少なすぎます");
 
-        // OSRM Match APIで道路スナップ
         const coords = recordedLogs.map(p => `${p.lng},${p.lat}`).join(';');
         const matchUrl = `https://router.project-osrm.org/match/v1/driving/${coords}?overview=full&geometries=geojson`;
 
