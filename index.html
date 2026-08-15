@@ -29,27 +29,27 @@
       padding: 20px;
     }
     .portal-card {
-      background: rgba(30, 41, 59, 0.9);
+      background: rgba(30, 41, 59, 0.85);
       border: 1px solid #334155;
       backdrop-filter: blur(12px);
       border-radius: 18px;
-      padding: 32px 20px;
+      padding: 36px 24px;
       max-width: 440px;
       width: 100%;
-      box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+      box-shadow: 0 12px 32px rgba(0,0,0,0.4);
     }
     .logo-img {
-      max-width: 240px;
+      max-width: 260px;
       width: 100%;
       height: auto;
       background: #ffffff;
       padding: 8px 16px;
       border-radius: 12px;
-      margin-bottom: 16px;
+      margin-bottom: 20px;
       box-shadow: 0 4px 16px rgba(0,0,0,0.2);
     }
     p {
-      margin: 0 0 24px;
+      margin: 0 0 28px;
       font-size: 13px;
       color: #cbd5e1;
       line-height: 1.5;
@@ -57,12 +57,12 @@
     .btn-group {
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 14px;
     }
     .portal-btn {
-      padding: 15px 20px;
+      padding: 14px 20px;
       border-radius: 10px;
-      font-size: 16px;
+      font-size: 15px;
       font-weight: bold;
       text-decoration: none;
       display: flex;
@@ -76,43 +76,51 @@
       color: #fff;
       box-shadow: 0 4px 12px rgba(29, 78, 216, 0.35);
     }
-    .btn-driver:active {
+    .btn-driver:hover {
       background: #1e40af;
-      transform: scale(0.98);
+      transform: translateY(-1px);
     }
     .btn-admin {
       background: #334155;
       color: #f8fafc;
       border: 1px solid #475569;
     }
-    .btn-admin:active {
+    .btn-admin:hover {
       background: #475569;
+      transform: translateY(-1px);
     }
     .pwa-hint {
-      margin-top: 20px;
+      margin-top: 24px;
       font-size: 11px;
       color: #64748b;
       line-height: 1.4;
     }
   </style>
+  <script>
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
+    if (isMobile && !window.location.search.includes('noredirect')) {
+      window.location.replace('driver.html');
+    }
+  </script>
 </head>
 <body>
 
   <div class="portal-card">
     <img src="logo.png" alt="Lively Navi" class="logo-img">
-    <p>ルート配送ドライバー向けナビゲーション＆運行管理システム</p>
+    <p>ルート配送ドライバー向けナビゲーション＆コース運行管理システム</p>
 
     <div class="btn-group">
       <a href="driver.html" class="portal-btn btn-driver">
         📱 スマホドライバーアプリを開く
       </a>
       <a href="admin.html" class="portal-btn btn-admin">
-        🖥️ PC管理画面を開く
+        🖥️ PC管理画面（CSV取込・コース作成）を開く
       </a>
     </div>
 
     <div class="pwa-hint">
-      ※スマホのブラウザメニューから「ホーム画面に追加」すると全画面アプリとしてご利用いただけます。
+      ※スマホでアクセスすると自動的にドライバー画面が開きます。<br>
+      ブラウザメニューから「ホーム画面に追加」すると全画面アプリとしてご利用いただけます。
     </div>
   </div>
 
