@@ -3,6 +3,11 @@
 Thumbs.db
 desktop.ini
 
-# Temporary files
+# Temporary & Log files
 *.tmp
 *.log
+
+# Delivery CSV Data Protection (本番の顧客情報CSVが誤ってGitHubに公開されないよう保護)
+*.csv
+!sample_delivery.csv
+!test_delivery.csv
