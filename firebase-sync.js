@@ -2,17 +2,28 @@
  * Lively Navi - Firebase Realtime Database 同期モジュール
  */
 
+// プロジェクト固有のデフォルトFirebase設定
+const DEFAULT_FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBk4ap0jdbWdy83Titr03rvOd0PsT597Ro",
+  authDomain: "lively-navi.firebaseapp.com",
+  projectId: "lively-navi",
+  storageBucket: "lively-navi.firebasestorage.app",
+  messagingSenderId: "218951573577",
+  appId: "1:218951573577:web:786794bb73686b01039f98",
+  databaseURL: "https://lively-navi-default-rtdb.firebaseio.com" // 米国/アジア自動フォールバック対応
+};
+
 const FIREBASE_CONFIG_KEY = 'lively_navi_firebase_config';
 let firebaseApp = null;
 let firebaseDb = null;
 
-// Firebase設定の取得
+// Firebase設定の取得（保存済み or デフォルト）
 function getSavedFirebaseConfig() {
   try {
     const raw = localStorage.getItem(FIREBASE_CONFIG_KEY);
     if (raw) return JSON.parse(raw);
   } catch (e) {}
-  return null;
+  return DEFAULT_FIREBASE_CONFIG;
 }
 
 // Firebase設定の保存
@@ -27,7 +38,8 @@ function saveFirebaseConfig(config) {
 
 // Firebase SDK 初期化
 function initFirebaseApp(config) {
-  if (!config || !config.apiKey || !config.databaseURL) {
+  const activeConfig = config || DEFAULT_FIREBASE_CONFIG;
+  if (!activeConfig || !activeConfig.apiKey) {
     console.log("Firebase config not provided. Running in Local Storage mode.");
     return false;
   }
@@ -37,17 +49,31 @@ function initFirebaseApp(config) {
       console.warn("Firebase SDK not loaded yet.");
       return false;
     }
+
     if (!firebase.apps.length) {
-      firebaseApp = firebase.initializeApp(config);
+      firebaseApp = firebase.initializeApp(activeConfig);
     } else {
       firebaseApp = firebase.app();
     }
-    firebaseDb = firebase.database();
-    console.log("✅ Firebase Realtime Database connected successfully:", config.projectId);
+
+    // データベースインスタンスの接続
+    if (activeConfig.databaseURL) {
+      firebaseDb = firebase.database();
+    } else {
+      firebaseDb = firebase.app().database("https://lively-navi-default-rtdb.asia-southeast1.firebasedatabase.app");
+    }
+
+    console.log("✅ Firebase Realtime Database connected successfully to project:", activeConfig.projectId);
     return true;
   } catch (err) {
-    console.error("Firebase init error:", err);
-    return false;
+    console.warn("Firebase primary init warning, trying fallback DB URL:", err);
+    try {
+      firebaseDb = firebase.app().database("https://lively-navi-default-rtdb.asia-southeast1.firebasedatabase.app");
+      return true;
+    } catch (e) {
+      console.error("Firebase fallback failed:", e);
+      return false;
+    }
   }
 }
 
@@ -61,6 +87,7 @@ async function uploadCourseToCloud(course) {
       ...course,
       updatedAt: Date.now()
     });
+    console.log("Course uploaded to cloud:", course.name);
     return true;
   } catch (err) {
     console.error("Upload course error:", err);
@@ -80,7 +107,7 @@ function subscribeCoursesFromCloud(onCoursesUpdated) {
     } else {
       onCoursesUpdated([]);
     }
-  });
+  }, (err) => console.warn("Subscribe courses warning:", err));
   return ref;
 }
 
@@ -131,7 +158,7 @@ function subscribeDriverLocations(onDriversUpdated) {
   ref.on('value', (snapshot) => {
     const data = snapshot.val();
     onDriversUpdated(data || {});
-  });
+  }, (err) => console.warn("Subscribe drivers warning:", err));
   return ref;
 }
 
@@ -171,7 +198,5 @@ async function fetchGpsLogFromCloud(courseId) {
 // 初期化実行
 document.addEventListener('DOMContentLoaded', () => {
   const saved = getSavedFirebaseConfig();
-  if (saved) {
-    initFirebaseApp(saved);
-  }
+  initFirebaseApp(saved);
 });

@@ -848,7 +848,7 @@
     }
 
     // --- コース保存 ---
-    document.getElementById('btnSaveCourse').addEventListener('click', () => {
+    document.getElementById('btnSaveCourse').addEventListener('click', async () => {
       if (currentParsedItems.length === 0) return alert("保存する配達データがありません。");
       const name = document.getElementById('courseNameInput').value || `コース ${Date.now()}`;
       const memo = document.getElementById('driverMemoInput').value || "";
@@ -865,7 +865,12 @@
       courses.unshift(newCourse);
       saveCourses(courses);
 
-      alert(`✅ コース「${name}」を保存しました！\nスマホドライバー画面から選択できるようになりました。`);
+      // クラウドへ自動アップロード
+      if (window.uploadCourseToCloud) {
+        await uploadCourseToCloud(newCourse);
+      }
+
+      alert(`✅ コース「${name}」を保存・クラウド配信しました！\nスマホドライバー画面に即時反映されます。`);
       switchTab('courses');
     });
 
@@ -891,7 +896,10 @@
         card.innerHTML = `
           <div class="course-header">
             <span class="course-title">${course.name}</span>
-            <button class="btn btn-red" style="padding:2px 6px; font-size:10px;" onclick="deleteCourse('${course.id}', event)">削除</button>
+            <div style="display:flex; gap:4px;">
+              <button class="btn btn-purple" style="padding:2px 6px; font-size:10px;" onclick="loadAndShowGpsTrackLog('${course.id}', event)">📍 走行ログ</button>
+              <button class="btn btn-red" style="padding:2px 6px; font-size:10px;" onclick="deleteCourse('${course.id}', event)">削除</button>
+            </div>
           </div>
           <div class="course-meta">
             <span>📦 ${totalCount} 件</span>
@@ -914,6 +922,24 @@
         listEl.appendChild(card);
       });
     }
+
+    // クラウドから走行ログを取得して地図上に描画
+    let gpsLogPolyline = null;
+    window.loadAndShowGpsTrackLog = async function(courseId, event) {
+      if (event) event.stopPropagation();
+      if (!window.fetchGpsLogFromCloud) return alert("Firebaseが接続されていません。");
+      const points = await fetchGpsLogFromCloud(courseId);
+      if (!points || points.length === 0) {
+        return alert("このコースの走行ログはまだありません（スマホで配送を開始すると自動蓄積されます）。");
+      }
+
+      if (gpsLogPolyline) map.removeLayer(gpsLogPolyline);
+      const latlngs = points.map(p => [p.lat, p.lng]);
+      gpsLogPolyline = L.polyline(latlngs, { color: '#ef4444', weight: 6, opacity: 0.9 }).addTo(map);
+      map.fitBounds(gpsLogPolyline.getBounds(), { padding: [40, 40] });
+
+      alert(`✅ スマホから記録された走行ログ（全 ${points.length} 地点）を赤線で地図上に描画しました！`);
+    };
 
     window.deleteCourse = function(courseId, event) {
       event.stopPropagation();
