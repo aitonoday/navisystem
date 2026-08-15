@@ -901,8 +901,12 @@
       isGpsRecording = false;
     }
 
-    // 初期化
-    refreshCourses();
+    // 初期化（安全にDOM構築完了を待機）
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', refreshCourses);
+    } else {
+      refreshCourses();
+    }
   </script>
 </body>
 </html>
