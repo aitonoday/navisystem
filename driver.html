@@ -371,9 +371,12 @@
             🔄 行き先変更
           </button>
         </div>
-      </div>
-
       <div id="map"></div>
+
+      <!-- 📍 現在地へセンタリングするフローティングボタン -->
+      <button id="btnRecenterLocation" class="btn btn-slate" style="position:absolute; bottom:24px; right:16px; z-index:1000; border-radius:50%; width:48px; height:48px; padding:0; box-shadow:0 4px 16px rgba(0,0,0,0.6); font-size:20px; border:2px solid #38bdf8;" onclick="centerOnUserLocation()" title="現在地を中心にする">
+        📍
+      </button>
     </div>
 
     <!-- ================= 2択選択モーダル（画面最上部に配置） ================= -->
@@ -740,6 +743,68 @@
       }
     }
 
+    let shouldCenterOnUser = true;
+
+    // --- マップ初期化 & 車のアイコン設定 ---
+    function initMap() {
+      if (!map) {
+        map = L.map('map', { zoomControl: false }).setView([34.685, 135.805], 16);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+          attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        L.control.zoom({ position: 'topright' }).addTo(map);
+
+        // ユーザーが手動で地図を動かした場合は自動センタリングを一時停止
+        map.on('dragstart', () => {
+          shouldCenterOnUser = false;
+        });
+      }
+      setTimeout(() => map.invalidateSize(), 200);
+    }
+
+    // 📍 現在地を中心にするボタン
+    window.centerOnUserLocation = function() {
+      if (currentUserCoords && map) {
+        shouldCenterOnUser = true;
+        map.setView([currentUserCoords.lat, currentUserCoords.lng], 17);
+      } else {
+        alert("GPS測位中です。少々お待ちください。");
+      }
+    };
+
+    function updateCarMarker(lat, lng) {
+      const isFirstFix = !currentUserCoords;
+      currentUserCoords = { lat, lng };
+      if (!map) return;
+
+      if (!userCarMarker) {
+        const carHtml = `
+          <div class="car-marker-container">
+            <div class="car-pulse"></div>
+            <div class="car-icon-body">🚚</div>
+          </div>
+        `;
+        const carIcon = L.divIcon({
+          html: carHtml,
+          className: 'custom-car-icon',
+          iconSize: [40, 40],
+          iconAnchor: [20, 20]
+        });
+        userCarMarker = L.marker([lat, lng], { icon: carIcon, zIndexOffset: 1000 }).addTo(map);
+      } else {
+        userCarMarker.setLatLng([lat, lng]);
+      }
+
+      // 配送開始時や初回GPS取得時は自動で現在地を中心にする
+      if (shouldCenterOnUser || isFirstFix) {
+        map.setView([lat, lng], 16);
+      }
+
+      checkProximityToTarget();
+    }
+
     async function drawRouteLine(lng1, lat1, lng2, lat2) {
       const url = `https://router.project-osrm.org/route/v1/driving/${lng1},${lat1};${lng2},${lat2}?overview=full&geometries=geojson`;
       try {
@@ -750,10 +815,11 @@
           currentRouteLayer = L.geoJSON(data.routes[0].geometry, {
             style: { color: '#1d4ed8', weight: 7, opacity: 0.95 } // 濃い青色
           }).addTo(map);
-          map.fitBounds(currentRouteLayer.getBounds(), { padding: [80, 80] });
+          // 画面は現在地を中心にする
+          map.setView([lat1, lng1], 16);
         }
       } catch (e) {
-        map.setView([lat2, lng2], 16);
+        map.setView([lat1, lng1], 16);
       }
     }
 
@@ -792,45 +858,6 @@
       const totalCount = currentCourse.items.length;
       document.getElementById('navDeliveredCount').innerText = doneCount;
       document.getElementById('navTotalCount').innerText = totalCount;
-    }
-
-    // --- マップ初期化 & 車のアイコン設定 ---
-    function initMap() {
-      if (!map) {
-        map = L.map('map', { zoomControl: false }).setView([34.685, 135.805], 13);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          maxZoom: 19,
-          attribution: '© OpenStreetMap'
-        }).addTo(map);
-
-        L.control.zoom({ position: 'topright' }).addTo(map);
-      }
-      setTimeout(() => map.invalidateSize(), 200);
-    }
-
-    function updateCarMarker(lat, lng) {
-      currentUserCoords = { lat, lng };
-      if (!map) return;
-
-      if (!userCarMarker) {
-        const carHtml = `
-          <div class="car-marker-container">
-            <div class="car-pulse"></div>
-            <div class="car-icon-body">🚚</div>
-          </div>
-        `;
-        const carIcon = L.divIcon({
-          html: carHtml,
-          className: 'custom-car-icon',
-          iconSize: [40, 40],
-          iconAnchor: [20, 20]
-        });
-        userCarMarker = L.marker([lat, lng], { icon: carIcon, zIndexOffset: 1000 }).addTo(map);
-      } else {
-        userCarMarker.setLatLng([lat, lng]);
-      }
-
-      checkProximityToTarget();
     }
 
     function plotMarkers() {
