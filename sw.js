@@ -1,14 +1,4 @@
-const CACHE_NAME = 'lively-navi-v3';
-const ASSETS_TO_CACHE = [
-  './',
-  './index.html',
-  './admin.html',
-  './driver.html',
-  './logo.png',
-  './manifest.json',
-  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
-  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
-];
+const CACHE_NAME = 'lively-navi-v4';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
@@ -19,9 +9,7 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((keys) => {
       return Promise.all(
         keys.map((key) => {
-          if (key !== CACHE_NAME) {
-            return caches.delete(key);
-          }
+          return caches.delete(key); // 古いキャッシュをすべて破棄
         })
       );
     })
@@ -29,22 +17,18 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
+// 地図タイル等の外部リソースは一切妨害せずスルー
 self.addEventListener('fetch', (event) => {
-  if (event.request.method !== 'GET') return;
-  // 常にネットワーク優先で最新ファイルを取得
-  event.respondWith(
-    fetch(event.request)
-      .then((response) => {
-        if (response && response.status === 200) {
-          const responseClone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseClone);
-          });
-        }
-        return response;
-      })
-      .catch(() => {
-        return caches.match(event.request);
-      })
-  );
+  // 同一ドメインのリクエストのみネットワーク優先で処理
+  if (event.request.method === 'GET' && event.request.url.startsWith(self.location.origin)) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          return response;
+        })
+        .catch(() => {
+          return caches.match(event.request);
+        })
+    );
+  }
 });

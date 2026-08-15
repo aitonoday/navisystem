@@ -3,30 +3,37 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>NaviSystem - 配達ドライバー</title>
+  <title>Lively Navi - 配達ドライバー</title>
   
   <!-- PWA設定 -->
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0f172a">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="NaviSystem">
-  <link rel="apple-touch-icon" href="icon-192.png">
+  <meta name="apple-mobile-web-app-title" content="Lively Navi">
+  <link rel="apple-touch-icon" href="logo.png">
 
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <!-- Leaflet CSS (Cloudflare CDN 高速・安定) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+  
   <style>
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-    body {
+    html, body {
       margin: 0;
       padding: 0;
-      width: 100vw;
-      height: 100vh;
+      width: 100%;
+      height: 100%;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       background: #0f172a;
       color: #f8fafc;
       overflow: hidden;
+    }
+    #app-root {
+      width: 100%;
+      height: 100%;
       display: flex;
       flex-direction: column;
+      position: relative;
     }
 
     /* 共通ボタン */
@@ -41,8 +48,9 @@
       align-items: center;
       justify-content: center;
       gap: 8px;
-      transition: all 0.2s;
+      transition: all 0.15s;
       text-decoration: none;
+      user-select: none;
     }
     .btn-blue { background: #1d4ed8; color: #fff; }
     .btn-blue:active { background: #1e40af; transform: scale(0.98); }
@@ -50,7 +58,7 @@
     .btn-green:active { background: #15803d; transform: scale(0.98); }
     .btn-amber { background: #d97706; color: #fff; }
     .btn-slate { background: #334155; color: #f8fafc; }
-    .btn-slate:active { background: #475569; }
+    .btn-slate:active { background: #475569; transform: scale(0.98); }
     .btn-outline { background: transparent; border: 1px solid #475569; color: #94a3b8; }
 
     /* 車の現在地アイコン */
@@ -92,46 +100,38 @@
       flex: 1;
       display: flex;
       flex-direction: column;
-      padding: 20px 16px;
+      padding: 16px;
       overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
     }
     .app-header-hero {
       text-align: center;
-      margin: 16px 0 20px;
-    }
-    .app-title {
-      font-size: 24px;
-      font-weight: 900;
-      color: #38bdf8;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
+      margin: 12px 0 16px;
     }
     .app-subtitle {
       font-size: 13px;
       color: #94a3b8;
-      margin-top: 4px;
+      margin-top: 6px;
     }
 
     .course-card-mobile {
       background: #1e293b;
       border: 1px solid #334155;
-      border-radius: 12px;
+      border-radius: 14px;
       padding: 16px;
       margin-bottom: 14px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      box-shadow: 0 4px 14px rgba(0,0,0,0.25);
     }
     .course-title-mobile {
       font-size: 16px;
       font-weight: bold;
       color: #f8fafc;
-      margin-bottom: 6px;
+      margin-bottom: 4px;
     }
     .course-desc-mobile {
       font-size: 12px;
       color: #94a3b8;
-      margin-bottom: 12px;
+      margin-bottom: 10px;
     }
     .course-stats {
       display: flex;
@@ -149,115 +149,100 @@
       flex: 1;
       display: none;
       flex-direction: column;
+      width: 100%;
+      height: 100%;
       position: relative;
     }
 
     /* ナビ上部バー */
     #nav-header {
       background: #1e293b;
-      padding: 10px 14px;
+      padding: 8px 12px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       border-bottom: 1px solid #334155;
       z-index: 1000;
-    }
-    .nav-course-title {
-      font-size: 13px;
-      font-weight: bold;
-      color: #f8fafc;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      max-width: 160px;
+      height: 50px;
     }
 
     /* メインマップエリア */
     #map-container {
       flex: 1;
+      width: 100%;
+      height: calc(100% - 50px);
       position: relative;
+      background: #0f172a;
     }
     #map {
       width: 100%;
       height: 100%;
+      background: #0f172a;
     }
 
-    /* 🚚 移動中・現在向かっている配送先情報カード */
+    /* 🚚 移動中・現在向かっている配送先情報カード（画面最上部） */
     #transit-target-card {
       position: absolute;
-      top: 12px;
-      left: 12px;
-      right: 12px;
+      top: 10px;
+      left: 10px;
+      right: 10px;
       background: rgba(15, 23, 42, 0.96);
       border: 2px solid #38bdf8;
-      backdrop-filter: blur(10px);
+      backdrop-filter: blur(12px);
       border-radius: 14px;
-      padding: 14px;
+      padding: 12px 14px;
       z-index: 1000;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
-      animation: fadeIn 0.25s ease-out;
+      box-shadow: 0 8px 28px rgba(0,0,0,0.6);
+      animation: fadeIn 0.2s ease-out;
     }
 
-    /* 到着ボタン（近接時にアクティブ表示） */
+    /* 到着ボタン */
     .btn-arrival {
       width: 100%;
-      padding: 15px;
-      font-size: 17px;
+      padding: 14px;
+      font-size: 16px;
       font-weight: 900;
       background: #16a34a;
       color: #fff;
       border-radius: 10px;
-      box-shadow: 0 4px 16px rgba(22, 163, 74, 0.5);
+      box-shadow: 0 4px 14px rgba(22, 163, 74, 0.4);
+    }
+    .btn-arrival:active {
+      background: #15803d;
+      transform: scale(0.98);
+    }
+    .btn-arrival.near-pulse {
       animation: arrivalPulse 1.5s infinite alternate;
+      border: 2px solid #86efac;
     }
     @keyframes arrivalPulse {
       0% { transform: scale(1); filter: brightness(1); }
       100% { transform: scale(1.02); filter: brightness(1.15); }
     }
 
-    /* 距離カウントダウンインジケータ（離れている時） */
-    .distance-indicator-box {
-      background: #1e293b;
-      border: 1px solid #475569;
-      border-radius: 8px;
-      padding: 10px;
-      text-align: center;
-      font-size: 13px;
-      color: #cbd5e1;
-      margin-bottom: 8px;
-    }
-    .distance-number {
-      font-size: 18px;
-      font-weight: 900;
-      color: #38bdf8;
-    }
-
-    /* 2択選択モーダル（画面最上部に大きく表示） */
+    /* 2択選択モーダル（画面最上部にフローティング表示、背後の地図は常に見える） */
     #select-next-modal {
       position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(15, 23, 42, 0.85);
-      backdrop-filter: blur(8px);
-      z-index: 2000;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      z-index: 1500;
       display: none;
-      flex-direction: column;
-      justify-content: flex-start; /* 画面最上部に配置 */
-      padding: 12px 14px;
+      pointer-events: none;
       animation: fadeIn 0.2s ease-out;
     }
     @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
+      from { opacity: 0; transform: translateY(-8px); }
+      to { opacity: 1; transform: translateY(0); }
     }
     .modal-content-card {
-      background: #1e293b;
+      pointer-events: auto;
+      background: rgba(30, 41, 59, 0.96);
       border: 2px solid #38bdf8;
+      backdrop-filter: blur(12px);
       border-radius: 16px;
-      padding: 18px 16px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.7);
+      padding: 14px 16px;
+      box-shadow: 0 10px 32px rgba(0,0,0,0.6);
     }
     .modal-headline {
       font-size: 12px;
@@ -275,7 +260,7 @@
     .modal-target-addr {
       font-size: 13px;
       color: #cbd5e1;
-      margin-bottom: 16px;
+      margin-bottom: 14px;
     }
 
     /* 配送先選択リストモーダル */
@@ -285,11 +270,11 @@
       left: 0;
       right: 0;
       bottom: 0;
-      background: rgba(15, 23, 42, 0.95);
+      background: rgba(15, 23, 42, 0.96);
       z-index: 2100;
       display: none;
       flex-direction: column;
-      padding: 16px 14px;
+      padding: 14px;
     }
     .dest-list-scroll {
       flex: 1;
@@ -301,17 +286,12 @@
       background: #1e293b;
       border: 1px solid #334155;
       border-radius: 10px;
-      padding: 12px 14px;
+      padding: 12px;
       margin-bottom: 10px;
       cursor: pointer;
-      transition: all 0.2s;
-    }
-    .dest-select-card:active {
-      border-color: #38bdf8;
-      background: #172554;
     }
     .dest-select-card.completed {
-      opacity: 0.5;
+      opacity: 0.6;
       background: #064e3b;
       border-color: #059669;
     }
@@ -333,130 +313,118 @@
 </head>
 <body>
 
-  <!-- ================= 画面1: コース選択画面 ================= -->
-  <div id="view-course-select">
-    <div class="app-header-hero">
-      <img src="logo.png" alt="Lively Navi" style="max-width: 220px; width: 100%; height: auto; background: #fff; padding: 6px 14px; border-radius: 10px; box-shadow: 0 4px 16px rgba(0,0,0,0.3); margin-bottom: 4px;">
-      <div class="app-subtitle">配達ナビゲーション＆運行管理</div>
-    </div>
+  <div id="app-root">
+    <!-- ================= 画面1: コース選択画面 ================= -->
+    <div id="view-course-select">
+      <div class="app-header-hero">
+        <img src="logo.png" alt="Lively Navi" style="max-width: 220px; width: 100%; height: auto; background: #fff; padding: 6px 14px; border-radius: 10px; box-shadow: 0 4px 16px rgba(0,0,0,0.3); margin-bottom: 4px;">
+        <div class="app-subtitle">配達ナビゲーション＆運行管理</div>
+      </div>
 
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-      <b style="font-size:15px;">本日のお届けコース</b>
-      <button class="btn btn-outline" style="padding:4px 8px; font-size:11px;" onclick="refreshCourses()">🔄 更新</button>
-    </div>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <b style="font-size:15px;">本日のお届けコース</b>
+        <button class="btn btn-outline" style="padding:4px 8px; font-size:11px;" onclick="refreshCourses()">🔄 更新</button>
+      </div>
 
-    <div id="courseCardsContainer">
-      <!-- コースカード動的挿入 -->
-    </div>
-  </div>
-
-  <!-- ================= 画面2: 運行・ナビ画面 ================= -->
-  <div id="view-nav-main">
-    <!-- 上部ヘッダー -->
-    <div id="nav-header">
-      <button class="btn btn-slate" style="padding:4px 8px; font-size:11px;" onclick="exitToCourseSelect()">
-        ◀ コース一覧
-      </button>
-      <img src="logo.png" alt="Lively Navi" style="height: 22px; background: #fff; padding: 2px 6px; border-radius: 4px;">
-      <div style="font-size:12px; color:#38bdf8; font-weight:bold;">
-        <span id="navDeliveredCount">0</span>/<span id="navTotalCount">0</span> 完了
+      <div id="courseCardsContainer">
+        <!-- コースカード動的挿入 -->
       </div>
     </div>
 
-    <!-- マップコンテナ -->
-    <div id="map-container">
-      <!-- 🚚 移動中・現在向かっている配送先情報カード -->
-      <div id="transit-target-card" style="display:none;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-          <span style="background:#0284c7; color:#fff; font-size:11px; font-weight:bold; padding:2px 8px; border-radius:4px;">
-            📍 配達順 #<span id="transitOrderNum">1</span>
-          </span>
-          <div id="tracking-indicator">
-            🔴 GPS記録中 (<span id="gpsPointCount">0</span>点)
+    <!-- ================= 画面2: 運行・ナビ画面 ================= -->
+    <div id="view-nav-main">
+      <!-- 上部ヘッダー -->
+      <div id="nav-header">
+        <button class="btn btn-slate" style="padding:4px 8px; font-size:11px;" onclick="exitToCourseSelect()">
+          ◀ コース一覧
+        </button>
+        <img src="logo.png" alt="Lively Navi" style="height: 22px; background: #fff; padding: 2px 6px; border-radius: 4px;">
+        <div style="font-size:12px; color:#38bdf8; font-weight:bold;">
+          <span id="navDeliveredCount">0</span>/<span id="navTotalCount">0</span> 完了
+        </div>
+      </div>
+
+      <!-- マップコンテナ -->
+      <div id="map-container">
+        <!-- 🚚 移動中・現在向かっている配送先情報カード（最上部に常時表示） -->
+        <div id="transit-target-card" style="display:none;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <span style="background:#0284c7; color:#fff; font-size:11px; font-weight:bold; padding:2px 8px; border-radius:4px;">
+              📍 配達順 #<span id="transitOrderNum">1</span>
+            </span>
+            <div id="tracking-indicator">
+              🔴 GPS記録中 (<span id="gpsPointCount">0</span>点)
+            </div>
           </div>
-        </div>
 
-        <div style="font-size:20px; font-weight:900; color:#38bdf8; margin:6px 0 2px;" id="transitName">宛名 様</div>
-        <div style="font-size:13px; color:#e2e8f0; margin-bottom:8px;" id="transitAddress">住所</div>
-        <div id="transitMemoBox" style="display:none; background:#1e293b; border-left:3px solid #f59e0b; padding:6px 10px; font-size:12px; color:#fbbf24; border-radius:0 6px 6px 0; margin-bottom:10px;">
-          📝 <span id="transitMemoText">備考メモ</span>
-        </div>
-
-        <!-- 距離判定エリア: 離れている時は距離表示、近づいたら到着ボタン出現 -->
-        <div id="transit-distance-area">
-          <div class="distance-indicator-box" id="distanceBox">
-            目的地まで あと <span class="distance-number" id="distanceText">-- m</span>
-            <div style="font-size:11px; color:#94a3b8; margin-top:2px;">（近づくと「到着ボタン」が表示されます）</div>
+          <div style="font-size:20px; font-weight:900; color:#38bdf8; margin:4px 0 2px;" id="transitName">宛名 様</div>
+          <div style="font-size:13px; color:#e2e8f0; margin-bottom:6px;" id="transitAddress">住所</div>
+          <div id="transitMemoBox" style="display:none; background:#1e293b; border-left:3px solid #f59e0b; padding:6px 10px; font-size:11px; color:#fbbf24; border-radius:0 6px 6px 0; margin-bottom:8px;">
+            📝 <span id="transitMemoText">備考メモ</span>
           </div>
-        </div>
 
-        <!-- 📍 到着ボタン（100m以内に近づくと自動表示） -->
-        <div id="arrival-button-wrapper" style="display:none; margin-bottom:6px;">
-          <button class="btn btn-arrival" onclick="onArrivalClick()">
+          <!-- 距離・近接表示エリア -->
+          <div style="display:flex; justify-content:space-between; align-items:center; background:#0f172a; padding:6px 10px; border-radius:6px; margin-bottom:8px; font-size:12px;">
+            <span>目的地まで: <b style="color:#38bdf8; font-size:14px;" id="distanceText">計算中...</b></span>
+            <span id="proximityStatusBadge" style="font-size:11px; color:#94a3b8;">案内中</span>
+          </div>
+
+          <!-- 📍 到着ボタン（常に押せて、近づくと点滅） -->
+          <button class="btn btn-arrival" id="mainArrivalButton" onclick="onArrivalClick()">
             📍 到着しました（配達完了）
           </button>
+
+          <div style="display:flex; gap:8px; margin-top:8px; align-items:center;">
+            <button class="btn btn-blue" style="flex:1; padding:8px; font-size:12px;" onclick="openExternalGoogleMap()">
+              🗺️ Googleマップ起動
+            </button>
+            <button class="btn btn-slate" style="flex:1; padding:8px; font-size:12px;" onclick="openChangeDestinationModal()">
+              🔄 行き先変更
+            </button>
+          </div>
         </div>
 
-        <div style="display:flex; gap:8px; margin-top:6px; align-items:center;">
-          <button class="btn btn-blue" style="flex:1; padding:8px; font-size:12px;" onclick="openExternalGoogleMap()">
-            🗺️ Googleマップ起動
-          </button>
-          <button class="btn btn-slate" style="flex:1; padding:8px; font-size:12px;" onclick="openChangeDestinationModal()">
-            🔄 別の配送先へ変更
-          </button>
-        </div>
+        <!-- 地図本体（全画面） -->
+        <div id="map"></div>
 
-        <!-- 手動完了フォールバックリンク（GPS誤差対策） -->
-        <div style="text-align:center; margin-top:8px;" id="manualCompleteLinkWrapper">
-          <a href="javascript:void(0)" onclick="onArrivalClick()" style="font-size:11px; color:#64748b; text-decoration:underline;">
-            ※GPSがズレている場合：手動で到着を記録する
-          </a>
-        </div>
-      </div>
-
-      <div id="map"></div>
-    </div>
-
-    <!-- ================= 2択選択モーダル（次の配送先：順番通り or 別の配送先） ================= -->
-    <div id="select-next-modal">
-      <div class="modal-content-card">
-        <div class="modal-headline" id="modalHeaderLabel">【1件目の配送先を選択】</div>
-        <div class="modal-target-title" id="modalDefaultTargetName">#1 ○○ 様</div>
-        <div class="modal-target-addr" id="modalDefaultTargetAddr">住所...</div>
-
-        <button class="btn btn-blue" style="width:100%; font-size:15px; padding:14px; margin-bottom:10px;" onclick="chooseNextSequentialTarget()">
-          🚚 この順番通りに出発する
-        </button>
-
-        <button class="btn btn-slate" style="width:100%; font-size:14px; padding:12px;" onclick="openAllDestinationsModal()">
-          📋 別の配送先を一覧から選ぶ
+        <!-- 📍 現在地へセンタリングするフローティングボタン -->
+        <button id="btnRecenterLocation" class="btn btn-slate" style="position:absolute; bottom:24px; right:16px; z-index:1000; border-radius:50%; width:48px; height:48px; padding:0; box-shadow:0 4px 16px rgba(0,0,0,0.6); font-size:20px; border:2px solid #38bdf8;" onclick="centerOnUserLocation()" title="現在地を中心にする">
+          📍
         </button>
       </div>
-    </div>
 
-    <!-- ================= 配送先一覧選択モーダル ================= -->
-    <div id="all-destinations-modal">
-      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #334155; padding-bottom:10px;">
-        <b style="font-size:16px; color:#38bdf8;">📋 配送先を一覧から選択</b>
-        <button class="btn btn-slate" style="padding:4px 8px; font-size:12px;" onclick="closeAllDestinationsModal()">✕ 閉じる</button>
+      <!-- ================= 2択選択モーダル（画面最上部にフローティング配置） ================= -->
+      <div id="select-next-modal">
+        <div class="modal-content-card" id="modalCardBody">
+          <!-- 動的書き換え -->
+        </div>
       </div>
 
-      <div class="dest-list-scroll" id="destListContainer"></div>
-    </div>
+      <!-- ================= 配送先一覧選択モーダル ================= -->
+      <div id="all-destinations-modal">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #334155; padding-bottom:10px;">
+          <b style="font-size:16px; color:#38bdf8;">📋 配送先を一覧から選択</b>
+          <button class="btn btn-slate" style="padding:4px 8px; font-size:12px;" onclick="closeAllDestinationsModal()">✕ 閉じる</button>
+        </div>
 
+        <div class="dest-list-scroll" id="destListContainer"></div>
+      </div>
+
+    </div>
   </div>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Leaflet JS (Cloudflare CDN) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
   <script>
-    // --- Service Worker (PWA) ---
+    // --- Service Worker ---
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js').catch(err => console.log('SW failed:', err));
+        navigator.serviceWorker.register('sw.js').catch(err => console.log('SW registration failed:', err));
       });
     }
 
     const STORAGE_KEY = 'navisystem_courses';
-    const PROXIMITY_THRESHOLD_METERS = 100; // 到着ボタンを表示する距離（100m）
+    const PROXIMITY_THRESHOLD_METERS = 100;
 
     let currentCourse = null;
     let currentTargetItem = null;
@@ -465,11 +433,10 @@
     let markers = [];
     let currentRouteLayer = null;
 
-    // 車の現在地マーカー
     let userCarMarker = null;
     let currentUserCoords = null;
+    let shouldCenterOnUser = true;
 
-    // GPS記録
     let isGpsRecording = false;
     let gpsWatchId = null;
     let recordedLogs = [];
@@ -506,9 +473,10 @@
     function refreshCourses() {
       const courses = getCourses();
       const container = document.getElementById('courseCardsContainer');
+      if (!container) return;
       container.innerHTML = '';
 
-      if (courses.length === 0) {
+      if (!courses || courses.length === 0) {
         container.innerHTML = `
           <div style="text-align:center; color:#94a3b8; margin-top:40px;">
             📦 本日の配達コースはまだありません。<br>
@@ -530,7 +498,7 @@
         card.innerHTML = `
           <div style="display:flex; justify-content:space-between; align-items:flex-start;">
             <div class="course-title-mobile">${course.name}</div>
-            <button class="btn btn-slate" style="padding:2px 6px; font-size:10px; color:#94a3b8;" onclick="resetCourseStatus('${course.id}', event)">
+            <button class="btn btn-slate" style="padding:2px 8px; font-size:10px; color:#94a3b8;" onclick="resetCourseStatus('${course.id}', event)">
               🔄 リセット
             </button>
           </div>
@@ -542,7 +510,7 @@
             </span>
           </div>
           <button class="btn ${isAllDone ? 'btn-green' : 'btn-blue'}" style="width:100%; font-size:15px; padding:12px;" onclick="startDeliveryWorkflow('${course.id}')">
-            ${isAllDone ? '✅ 配達完了済（確認・再配送）' : `🚚 配送を再開する（残り ${remainingCount}件）`}
+            ${isAllDone ? '✅ 配達完了済（確認・再配送）' : `🚚 配送を開始する（残り ${remainingCount}件）`}
           </button>
         `;
         container.appendChild(card);
@@ -551,33 +519,36 @@
 
     window.resetCourseStatus = function(courseId, event) {
       if (event) event.stopPropagation();
-      if (!confirm("このコースの配達完了状況をすべてリセットして、最初から配送できるようにしますか？")) return;
+      if (!confirm("このコースの配達完了状況をリセットして最初から配送しますか？")) return;
       const courses = getCourses();
       const target = courses.find(c => c.id === courseId);
       if (target) {
         target.items.forEach(i => i.isDone = false);
         saveCourses(courses);
         refreshCourses();
-        alert("✅ 配達完了状況をリセットしました！");
+        alert("✅ 配達状況をリセットしました！");
       }
     };
 
     // --- 1. 配送開始（コース起動） ---
     window.startDeliveryWorkflow = function(courseId) {
-      const courses = getCourses();
-      currentCourse = courses.find(c => c.id === courseId);
-      if (!currentCourse) return alert("コースが見つかりません");
+      try {
+        const courses = getCourses();
+        currentCourse = courses.find(c => c.id === courseId);
+        if (!currentCourse) return alert("コースが見つかりません");
 
-      currentCourse.items.sort((a, b) => (a.order || a.id) - (b.order || b.id));
+        currentCourse.items.sort((a, b) => (a.order || a.id) - (b.order || b.id));
 
-      document.getElementById('view-course-select').style.display = 'none';
-      document.getElementById('view-nav-main').style.display = 'flex';
-      document.getElementById('currentCourseTitle').innerText = currentCourse.name;
+        document.getElementById('view-course-select').style.display = 'none';
+        document.getElementById('view-nav-main').style.display = 'flex';
 
-      initMap();
-      startContinuousGpsTracking();
-
-      promptNextDestinationSelection(true);
+        initMap();
+        startContinuousGpsTracking();
+        promptNextDestinationSelection(true);
+      } catch (err) {
+        console.error("startDeliveryWorkflow error:", err);
+        alert("開始中にエラーが発生しました: " + err.message);
+      }
     };
 
     window.exitToCourseSelect = function() {
@@ -591,20 +562,15 @@
     function promptNextDestinationSelection(isFirst = false) {
       updateNavStats();
       const undoneItems = currentCourse.items.filter(i => !i.isDone);
+      const modalCard = document.getElementById('modalCardBody');
 
       if (undoneItems.length === 0) {
-        // 全件完了している場合：完了サマリーカードを上部に表示し、再配送や一覧選択を可能にする
         document.getElementById('transit-target-card').style.display = 'none';
         document.getElementById('select-next-modal').style.display = 'flex';
-        document.getElementById('modalHeaderLabel').innerText = "【🎉 全配達完了】";
-        document.getElementById('modalDefaultTargetName').innerHTML = `<span style="color:#4ade80;">本日の配達はすべて完了しています</span>`;
-        document.getElementById('modalDefaultTargetAddr').innerText = `全 ${currentCourse.items.length} 件のお届けが完了しました。`;
-
-        const modalEl = document.getElementById('select-next-modal');
-        modalEl.querySelector('.modal-content-card').innerHTML = `
+        modalCard.innerHTML = `
           <div class="modal-headline" style="color:#4ade80;">🎉 全件配達完了</div>
           <div class="modal-target-title" style="color:#4ade80; font-size:18px;">本日の配達はすべて完了しています</div>
-          <div class="modal-target-addr">配達完了データは保持されています。一覧から選んで再配送や確認が可能です。</div>
+          <div class="modal-target-addr">配達データは保持されています。一覧から選んで再配送や確認が可能です。</div>
           <button class="btn btn-blue" style="width:100%; font-size:14px; padding:12px; margin-bottom:8px;" onclick="openAllDestinationsModal()">
             📋 配送先一覧から選んで再度向かう
           </button>
@@ -617,11 +583,10 @@
       }
 
       const nextDefault = undoneItems[0];
-      const modalEl = document.getElementById('select-next-modal');
-      modalEl.querySelector('.modal-content-card').innerHTML = `
-        <div class="modal-headline" id="modalHeaderLabel">${isFirst ? "【1件目の配送先を選択】" : "【次の配送先を選択】"}</div>
-        <div class="modal-target-title" id="modalDefaultTargetName">#${nextDefault.order || nextDefault.id} ${nextDefault.name} 様</div>
-        <div class="modal-target-addr" id="modalDefaultTargetAddr">${nextDefault.address}</div>
+      modalCard.innerHTML = `
+        <div class="modal-headline">${isFirst ? "【1件目の配送先を選択】" : "【次の配送先を選択】"}</div>
+        <div class="modal-target-title">#${nextDefault.order || nextDefault.id} ${nextDefault.name} 様</div>
+        <div class="modal-target-addr">${nextDefault.address}</div>
         <button class="btn btn-blue" style="width:100%; font-size:15px; padding:14px; margin-bottom:10px;" onclick="chooseNextSequentialTarget()">
           🚚 この順番通りに出発する
         </button>
@@ -636,7 +601,7 @@
     }
 
     window.resetCurrentCourseAndRestart = function() {
-      if (!confirm("すべての配達先を未配達に戻して、最初から配送をやり直しますか？")) return;
+      if (!confirm("すべての配達先を未配達に戻して最初からやり直しますか？")) return;
       currentCourse.items.forEach(i => i.isDone = false);
       const courses = getCourses();
       const idx = courses.findIndex(c => c.id === currentCourse.id);
@@ -670,11 +635,11 @@
           </div>
           <div style="font-size:12px; color:#94a3b8; margin:4px 0;">${item.address}</div>
           ${item.memo ? `<div style="font-size:11px; color:#fbbf24;">📝 ${item.memo}</div>` : ''}
-          <div style="display:flex; gap:6px; margin-top:6px;">
-            <button class="btn btn-blue" style="flex:1; padding:6px; font-size:11px;" onclick="event.stopPropagation(); setTargetAndBeginTransitDirect(${item.id})">
+          <div style="display:flex; gap:6px; margin-top:8px;">
+            <button class="btn btn-blue" style="flex:1; padding:8px; font-size:12px;" onclick="event.stopPropagation(); setTargetAndBeginTransitDirect(${item.id})">
               🚚 ここへ向かう
             </button>
-            <button class="btn btn-slate" style="padding:6px 8px; font-size:11px;" onclick="event.stopPropagation(); toggleItemDoneState(${item.id})">
+            <button class="btn btn-slate" style="padding:8px 10px; font-size:11px;" onclick="event.stopPropagation(); toggleItemDoneState(${item.id})">
               ${item.isDone ? '↩ 未完に戻す' : '✅ 完了にする'}
             </button>
           </div>
@@ -717,17 +682,12 @@
     };
 
     // --- 3. 配送先を確定して移動・ナビ開始 ---
-    async function setTargetAndBeginTransit(item) {
+    window.setTargetAndBeginTransit = function(item) {
       currentTargetItem = item;
       document.getElementById('select-next-modal').style.display = 'none';
       document.getElementById('all-destinations-modal').style.display = 'none';
       document.getElementById('transit-target-card').style.display = 'block';
 
-      // 初期状態：距離未判定
-      document.getElementById('arrival-button-wrapper').style.display = 'none';
-      document.getElementById('transit-distance-area').style.display = 'block';
-
-      // カード情報の更新
       document.getElementById('transitOrderNum').innerText = item.order || item.id;
       document.getElementById('transitName').innerText = `${item.name} 様`;
       document.getElementById('transitAddress').innerText = item.address;
@@ -743,38 +703,41 @@
       currentLegLogs = [];
       plotMarkers();
 
-      // 現在地からの距離チェック & ルート線描画
       checkProximityToTarget();
       calculateTransitRoute(item);
-    }
+    };
 
-    // --- 距離計算 & 近接判定（到着ボタンの制御） ---
     function checkProximityToTarget() {
       if (!currentTargetItem) return;
 
-      let distMeters = 9999;
+      const distTextEl = document.getElementById('distanceText');
+      const badgeEl = document.getElementById('proximityStatusBadge');
+      const arrivalBtn = document.getElementById('mainArrivalButton');
+
+      let distMeters = null;
       if (currentUserCoords) {
         distMeters = map.distance([currentUserCoords.lat, currentUserCoords.lng], [currentTargetItem.lat, currentTargetItem.lng]);
       }
 
-      const distTextEl = document.getElementById('distanceText');
-      const arrivalBtnWrapper = document.getElementById('arrival-button-wrapper');
-      const distanceArea = document.getElementById('transit-distance-area');
+      if (distMeters !== null) {
+        if (distMeters < 1000) {
+          distTextEl.innerText = `${Math.round(distMeters)} m`;
+        } else {
+          distTextEl.innerText = `${(distMeters / 1000).toFixed(1)} km`;
+        }
 
-      if (distMeters < 1000) {
-        distTextEl.innerText = `${Math.round(distMeters)} m`;
+        if (distMeters <= PROXIMITY_THRESHOLD_METERS) {
+          badgeEl.innerText = "🎯 目的地付近！";
+          badgeEl.style.color = "#4ade80";
+          arrivalBtn.classList.add('near-pulse');
+        } else {
+          badgeEl.innerText = "案内中";
+          badgeEl.style.color = "#94a3b8";
+          arrivalBtn.classList.remove('near-pulse');
+        }
       } else {
-        distTextEl.innerText = `${(distMeters / 1000).toFixed(1)} km`;
-      }
-
-      if (distMeters <= PROXIMITY_THRESHOLD_METERS) {
-        // 100m以内に入ったら「到着ボタン」を表示！
-        arrivalBtnWrapper.style.display = 'block';
-        distanceArea.style.display = 'none';
-        if (navigator.vibrate) navigator.vibrate([100, 50, 100]); // 振動通知
-      } else {
-        arrivalBtnWrapper.style.display = 'none';
-        distanceArea.style.display = 'block';
+        distTextEl.innerText = "測位中...";
+        badgeEl.innerText = "GPS接続中";
       }
     }
 
@@ -796,6 +759,68 @@
       }
     }
 
+    // --- マップ初期化 (国土地理院 & OSM ハイブリッド) ---
+    function initMap() {
+      if (!map) {
+        map = L.map('map', { zoomControl: false }).setView([34.685062, 135.832809], 15);
+
+        // 国土地理院 標準地図タイル（日本国内最速・詳細・安定）
+        L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', {
+          maxZoom: 18,
+          attribution: '© <a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank">国土地理院</a>'
+        }).addTo(map);
+
+        L.control.zoom({ position: 'topright' }).addTo(map);
+
+        map.on('dragstart', () => {
+          shouldCenterOnUser = false;
+        });
+      }
+
+      setTimeout(() => map.invalidateSize(), 50);
+      setTimeout(() => map.invalidateSize(), 200);
+      setTimeout(() => map.invalidateSize(), 500);
+    }
+
+    window.centerOnUserLocation = function() {
+      if (currentUserCoords && map) {
+        shouldCenterOnUser = true;
+        map.setView([currentUserCoords.lat, currentUserCoords.lng], 17);
+      } else {
+        alert("GPS測位中です。少々お待ちください。");
+      }
+    };
+
+    function updateCarMarker(lat, lng) {
+      const isFirstFix = !currentUserCoords;
+      currentUserCoords = { lat, lng };
+      if (!map) return;
+
+      if (!userCarMarker) {
+        const carHtml = `
+          <div class="car-marker-container">
+            <div class="car-pulse"></div>
+            <div class="car-icon-body">🚚</div>
+          </div>
+        `;
+        const carIcon = L.divIcon({
+          html: carHtml,
+          className: 'custom-car-icon',
+          iconSize: [40, 40],
+          iconAnchor: [20, 20]
+        });
+        userCarMarker = L.marker([lat, lng], { icon: carIcon, zIndexOffset: 1000 }).addTo(map);
+      } else {
+        userCarMarker.setLatLng([lat, lng]);
+      }
+
+      if (shouldCenterOnUser || isFirstFix) {
+        map.setView([lat, lng], 16);
+      }
+
+      checkProximityToTarget();
+    }
+
     async function drawRouteLine(lng1, lat1, lng2, lat2) {
       const url = `https://router.project-osrm.org/route/v1/driving/${lng1},${lat1};${lng2},${lat2}?overview=full&geometries=geojson`;
       try {
@@ -806,14 +831,14 @@
           currentRouteLayer = L.geoJSON(data.routes[0].geometry, {
             style: { color: '#1d4ed8', weight: 7, opacity: 0.95 } // 濃い青色
           }).addTo(map);
-          map.fitBounds(currentRouteLayer.getBounds(), { padding: [80, 80] });
+          map.setView([lat1, lng1], 16);
         }
       } catch (e) {
-        map.setView([lat2, lng2], 16);
+        map.setView([lat1, lng1], 16);
       }
     }
 
-    // --- 4. 到着ボタンが押された時 ---
+    // --- 到着ボタン押下 ---
     window.onArrivalClick = function() {
       if (!currentTargetItem) return;
 
@@ -848,45 +873,6 @@
       const totalCount = currentCourse.items.length;
       document.getElementById('navDeliveredCount').innerText = doneCount;
       document.getElementById('navTotalCount').innerText = totalCount;
-    }
-
-    // --- マップ初期化 & 車のアイコン設定 ---
-    function initMap() {
-      if (!map) {
-        map = L.map('map', { zoomControl: false }).setView([34.685, 135.805], 13);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          maxZoom: 19,
-          attribution: '© OpenStreetMap'
-        }).addTo(map);
-
-        L.control.zoom({ position: 'topright' }).addTo(map);
-      }
-      setTimeout(() => map.invalidateSize(), 200);
-    }
-
-    function updateCarMarker(lat, lng) {
-      currentUserCoords = { lat, lng };
-      if (!map) return;
-
-      if (!userCarMarker) {
-        const carHtml = `
-          <div class="car-marker-container">
-            <div class="car-pulse"></div>
-            <div class="car-icon-body">🚚</div>
-          </div>
-        `;
-        const carIcon = L.divIcon({
-          html: carHtml,
-          className: 'custom-car-icon',
-          iconSize: [40, 40],
-          iconAnchor: [20, 20]
-        });
-        userCarMarker = L.marker([lat, lng], { icon: carIcon, zIndexOffset: 1000 }).addTo(map);
-      } else {
-        userCarMarker.setLatLng([lat, lng]);
-      }
-
-      checkProximityToTarget();
     }
 
     function plotMarkers() {
@@ -930,7 +916,7 @@
       }
     };
 
-    // --- GPS連続トラッキング（現在地車アイコン更新 & ルート記録） ---
+    // --- GPS追従 ---
     function startContinuousGpsTracking() {
       if (!navigator.geolocation) return;
       isGpsRecording = true;
@@ -946,9 +932,10 @@
         gpsPolyline.addLatLng([pt.lat, pt.lng]);
         document.getElementById('gpsPointCount').innerText = recordedLogs.length;
 
-        // 車アイコンの位置更新 & 近接判定
         updateCarMarker(pt.lat, pt.lng);
-      }, (err) => console.error(err), { enableHighAccuracy: true, maximumAge: 1000 });
+      }, (err) => {
+        console.warn("GPS error:", err);
+      }, { enableHighAccuracy: true, maximumAge: 2000, timeout: 10000 });
     }
 
     function stopGpsTracking() {
@@ -957,7 +944,11 @@
     }
 
     // 初期化
-    refreshCourses();
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', refreshCourses);
+    } else {
+      refreshCourses();
+    }
   </script>
 </body>
 </html>
