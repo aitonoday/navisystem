@@ -2,386 +2,132 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>配達ナビ＆ルート管理システム (NaviSystem)</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>NaviSystem - 配達ナビゲーション＆運行管理</title>
+  
+  <!-- PWA設定 -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="apple-touch-icon" href="icon-192.png">
+
   <style>
     * { box-sizing: border-box; }
-    body { margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background: #f8fafc; color: #1e293b; }
-    #header { background: #0f172a; color: #fff; padding: 10px 16px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: 13px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-    .header-title { font-weight: bold; font-size: 15px; margin-right: 8px; }
-    .btn { padding: 6px 12px; border: none; border-radius: 4px; font-weight: 600; cursor: pointer; font-size: 12px; display: inline-flex; align-items: center; gap: 4px; transition: opacity 0.2s; }
-    .btn:hover { opacity: 0.9; }
-    .btn-blue { background: #2563eb; color: #fff; }
-    .btn-green { background: #16a34a; color: #fff; }
-    .btn-red { background: #dc2626; color: #fff; }
-    .btn-slate { background: #475569; color: #fff; }
-    #main { display: flex; flex: 1; position: relative; overflow: hidden; }
-    #sidebar { width: 340px; background: #fff; border-right: 1px solid #e2e8f0; display: flex; flex-direction: column; }
-    #map { flex: 1; height: 100%; }
-    .list-container { flex: 1; overflow-y: auto; padding: 8px; }
-    .delivery-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; font-size: 12px; cursor: pointer; transition: all 0.2s; }
-    .delivery-card:hover { border-color: #94a3b8; background: #f8fafc; }
-    .delivery-card.completed { background: #f0fdf4; border-color: #86efac; opacity: 0.75; }
-    .badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; background: #e2e8f0; color: #475569; }
-    .badge-done { background: #bbf7d0; color: #166534; }
-    #tracking-bar { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(15, 23, 42, 0.9); color: #fff; padding: 10px 20px; border-radius: 30px; z-index: 1000; display: none; align-items: center; gap: 12px; font-size: 13px; box-shadow: 0 4px 12px rgba(0,0,0,0.25); }
-    @media (max-width: 768px) {
-      #sidebar { display: none; }
+    body {
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      color: #f8fafc;
+      text-align: center;
+      padding: 20px;
+    }
+    .portal-card {
+      background: rgba(30, 41, 59, 0.8);
+      border: 1px solid #334155;
+      backdrop-filter: blur(10px);
+      border-radius: 16px;
+      padding: 32px 24px;
+      max-width: 440px;
+      width: 100%;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+    }
+    .logo {
+      font-size: 48px;
+      margin-bottom: 12px;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 24px;
+      color: #38bdf8;
+    }
+    p {
+      margin: 0 0 28px;
+      font-size: 13px;
+      color: #94a3b8;
+      line-height: 1.5;
+    }
+    .btn-group {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .portal-btn {
+      padding: 14px 20px;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: bold;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: all 0.2s;
+    }
+    .btn-driver {
+      background: #2563eb;
+      color: #fff;
+    }
+    .btn-driver:hover {
+      background: #1d4ed8;
+      transform: translateY(-1px);
+    }
+    .btn-admin {
+      background: #334155;
+      color: #f8fafc;
+      border: 1px solid #475569;
+    }
+    .btn-admin:hover {
+      background: #475569;
+      transform: translateY(-1px);
+    }
+    .pwa-hint {
+      margin-top: 24px;
+      font-size: 11px;
+      color: #64748b;
+      line-height: 1.4;
     }
   </style>
+  <script>
+    // スマホ端末（画面幅768px以下またはモバイルUA）の場合は自動的にドライバー画面へ遷移
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
+    if (isMobile && !window.location.search.includes('noredirect')) {
+      window.location.replace('driver.html');
+    }
+  </script>
 </head>
 <body>
 
-  <div id="header">
-    <span class="header-title">🚚 NaviSystem</span>
-    <label class="btn btn-blue">
-      📂 CSV取込 <input type="file" id="csvInput" accept=".csv" style="display:none;">
-    </label>
-    <label class="btn btn-slate">
-      🗺️ 固定ルート(GeoJSON)取込 <input type="file" id="routeInput" accept=".geojson,.json" style="display:none;">
-    </label>
-    
-    <button id="btnStartTracking" class="btn btn-green">▶ 運行開始 (GPS記録)</button>
-    <button id="btnStopTracking" class="btn btn-red" style="display:none;">⏹ 運行終了・ルート保存</button>
-    <span id="statusText" style="margin-left: auto; font-size: 12px; color: #94a3b8;">待機中</span>
-  </div>
+  <div class="portal-card">
+    <div class="logo">🚚</div>
+    <h1>NaviSystem</h1>
+    <p>ルート配送ドライバー向けナビゲーション＆コース運行管理システム</p>
 
-  <div id="main">
-    <div id="sidebar">
-      <div style="padding: 12px; border-bottom: 1px solid #e2e8f0; font-weight: bold; background: #f8fafc; display: flex; justify-content: space-between; align-items: center;">
-        <span>本日配達リスト</span>
-        <span style="font-size: 12px; color: #64748b;">完了: <b id="countDelivered" style="color:#16a34a;">0</b> / <span id="countTotal">0</span> 件</span>
-      </div>
-      <div class="list-container" id="deliveryList">
-        <div style="color: #94a3b8; text-align: center; margin-top: 40px; font-size: 13px;">CSVファイルを読み込んでください</div>
-      </div>
+    <div class="btn-group">
+      <a href="driver.html" class="portal-btn btn-driver">
+        📱 スマホドライバーアプリを開く
+      </a>
+      <a href="admin.html" class="portal-btn btn-admin">
+        🖥️ PC管理画面（CSV取込・コース作成）を開く
+      </a>
     </div>
 
-    <div id="map"></div>
-
-    <div id="tracking-bar">
-      <span>🔴 <b>GPS運行記録中</b> | 記録地点: <span id="pointCount">0</span> 点</span>
+    <div class="pwa-hint">
+      ※スマホでアクセスすると自動的にドライバー画面が開きます。<br>
+      ブラウザメニューから「ホーム画面に追加」すると全画面アプリとしてご利用いただけます。
     </div>
   </div>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    const map = L.map('map').setView([34.685, 135.805], 13);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '© OpenStreetMap contributors'
-    }).addTo(map);
-
-    let deliveryItems = [];
-    let savedRouteLayers = [];
-    let currentNavRouteLayer = null;
-
-    let isTracking = false;
-    let watchId = null;
-    let recordedGpsLogs = [];
-    let gpsPolyline = null;
-
-    // --- 住所ジオコーディング（国土地理院API + フォールバック検索） ---
-    async function geocodeAddress(address) {
-      if (!address) return null;
-      let cleanAddr = address.trim().replace(/[ー−―-]/g, '-');
-      
-      let result = await fetchGsi(cleanAddr);
-      if (result) return result;
-
-      const simplifiedAddr = cleanAddr.replace(/[0-9０-９].*$/, '').trim();
-      if (simplifiedAddr && simplifiedAddr !== cleanAddr) {
-        result = await fetchGsi(simplifiedAddr);
-        if (result) return result;
-      }
-      return null;
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').catch(err => console.log('SW failed:', err));
     }
-
-    async function fetchGsi(query) {
-      try {
-        const url = `https://msearch.gsi.go.jp/address-search/AddressSearch?q=${encodeURIComponent(query)}`;
-        const res = await fetch(url);
-        const data = await res.json();
-        if (data && data.length > 0) {
-          return { lat: data[0].geometry.coordinates[1], lng: data[0].geometry.coordinates[0] };
-        }
-      } catch (e) {
-        console.error("ジオコーディング通信エラー:", query, e);
-      }
-      return null;
-    }
-
-    // --- CSV取り込み処理 (Shift-JIS / UTF-8 自動判別) ---
-    document.getElementById('csvInput').addEventListener('change', async (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-
-      document.getElementById('statusText').innerText = "ファイルを解析中...";
-      const buffer = await file.arrayBuffer();
-      let text = "";
-      try {
-        const utf8Decoder = new TextDecoder('utf-8', { fatal: true });
-        text = utf8Decoder.decode(buffer);
-      } catch (err) {
-        const sjisDecoder = new TextDecoder('shift-jis');
-        text = sjisDecoder.decode(buffer);
-      }
-
-      const rows = parseCSV(text);
-      if (rows.length < 2) {
-        alert("CSVに有効なデータが含まれていません。");
-        return;
-      }
-
-      const header = rows[0].map(h => h.trim());
-      let nameIndex = header.findIndex(h => h.includes('名前') || h.includes('氏名') || h.includes('顧客') || h.includes('宛先'));
-      let addrIndex = header.findIndex(h => h.includes('住所') || h.includes('お届け先') || h.includes('送付先') || h.includes('場所'));
-
-      if (nameIndex === -1) nameIndex = 0;
-      if (addrIndex === -1) addrIndex = 1;
-
-      deliveryItems.forEach(item => item.marker && map.removeLayer(item.marker));
-      deliveryItems = [];
-
-      document.getElementById('statusText').innerText = "住所を座標に変換中...";
-
-      let successCount = 0;
-      for (let i = 1; i < rows.length; i++) {
-        const row = rows[i];
-        if (!row || row.length <= addrIndex) continue;
-
-        const name = row[nameIndex] || `配達先 ${i}`;
-        const address = row[addrIndex] || "";
-        if (!address) continue;
-
-        const coords = await geocodeAddress(address);
-        
-        const item = {
-          id: deliveryItems.length + 1,
-          name: name,
-          address: address,
-          lat: coords ? coords.lat : 34.685 + (Math.random() - 0.5) * 0.05,
-          lng: coords ? coords.lng : 135.805 + (Math.random() - 0.5) * 0.05,
-          isDone: false,
-          hasValidCoords: !!coords
-        };
-
-        item.marker = createDeliveryMarker(item);
-        deliveryItems.push(item);
-        if (coords) successCount++;
-      }
-
-      updateUI();
-      
-      if (deliveryItems.length > 0) {
-        const group = new L.featureGroup(deliveryItems.map(d => d.marker));
-        map.fitBounds(group.getBounds(), { padding: [30, 30] });
-      }
-
-      document.getElementById('statusText').innerText = `完了: ${deliveryItems.length}件中 ${successCount}件の位置を特定`;
-    });
-
-    function parseCSV(text) {
-      const lines = text.split(/\r\n|\n|\r/);
-      const result = [];
-      for (const line of lines) {
-        if (!line.trim()) continue;
-        const row = [];
-        let insideQuote = false;
-        let entry = '';
-        for (let i = 0; i < line.length; i++) {
-          const char = line[i];
-          if (char === '"') {
-            insideQuote = !insideQuote;
-          } else if (char === ',' && !insideQuote) {
-            row.push(entry.trim().replace(/^"|"$/g, ''));
-            entry = '';
-          } else {
-            entry += char;
-          }
-        }
-        row.push(entry.trim().replace(/^"|"$/g, ''));
-        result.push(row);
-      }
-      return result;
-    }
-
-    function createDeliveryMarker(item) {
-      const marker = L.circleMarker([item.lat, item.lng], {
-        radius: 9,
-        fillColor: item.isDone ? "#16a34a" : "#2563eb",
-        color: "#fff",
-        weight: 2,
-        fillOpacity: 0.9
-      }).addTo(map);
-
-      const popupHtml = `
-        <div style="min-width:180px;">
-          <b style="font-size:13px;">#${item.id} ${item.name}</b><br>
-          <span style="font-size:11px; color:#64748b;">${item.address}</span><br><br>
-          <div style="display:flex; gap:6px;">
-            <button class="btn btn-blue" style="flex:1;" onclick="navigateTo(${item.id})">案内</button>
-            <button class="btn btn-green" style="flex:1;" onclick="toggleDone(${item.id})">${item.isDone ? '未完了' : '配達完了'}</button>
-          </div>
-        </div>
-      `;
-      marker.bindPopup(popupHtml);
-      return marker;
-    }
-
-    window.navigateTo = async function(id) {
-      const target = deliveryItems.find(it => it.id === id);
-      if (!target) return;
-
-      navigator.geolocation.getCurrentPosition(async (pos) => {
-        const curLat = pos.coords.latitude;
-        const curLng = pos.coords.longitude;
-
-        const url = `https://router.project-osrm.org/route/v1/driving/${curLng},${curLat};${target.lng},${target.lat}?overview=full&geometries=geojson`;
-        try {
-          const res = await fetch(url);
-          const data = await res.json();
-          if (data.routes && data.routes.length > 0) {
-            if (currentNavRouteLayer) map.removeLayer(currentNavRouteLayer);
-            currentNavRouteLayer = L.geoJSON(data.routes[0].geometry, {
-              style: { color: '#f59e0b', weight: 6, dashArray: '4, 8' }
-            }).addTo(map);
-            map.fitBounds(currentNavRouteLayer.getBounds(), { padding: [40, 40] });
-          }
-        } catch (e) {
-          window.open(`https://www.google.com/maps/dir/?api=1&destination=${target.lat},${target.lng}`);
-        }
-      }, () => {
-        window.open(`https://www.google.com/maps/dir/?api=1&destination=${target.lat},${target.lng}`);
-      });
-    };
-
-    window.toggleDone = function(id) {
-      const item = deliveryItems.find(it => it.id === id);
-      if (item) {
-        item.isDone = !item.isDone;
-        item.marker.setStyle({ fillColor: item.isDone ? "#16a34a" : "#2563eb" });
-        item.marker.closePopup();
-        updateUI();
-      }
-    };
-
-    function updateUI() {
-      const listEl = document.getElementById('deliveryList');
-      listEl.innerHTML = '';
-      let doneCount = 0;
-
-      deliveryItems.forEach(item => {
-        if (item.isDone) doneCount++;
-        const card = document.createElement('div');
-        card.className = `delivery-card ${item.isDone ? 'completed' : ''}`;
-        card.innerHTML = `
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <b style="font-size:13px;">#${item.id} ${item.name}</b>
-            <span class="badge ${item.isDone ? 'badge-done' : ''}">${item.isDone ? '完了' : '未配達'}</span>
-          </div>
-          <div style="color:#64748b; font-size:11px; margin-top:3px;">${item.address}</div>
-        `;
-        card.onclick = () => {
-          map.setView([item.lat, item.lng], 16);
-          item.marker.openPopup();
-        };
-        listEl.appendChild(card);
-      });
-
-      document.getElementById('countDelivered').innerText = doneCount;
-      document.getElementById('countTotal').innerText = deliveryItems.length;
-    }
-
-    // --- 固定ルート(GeoJSON)の取り込み表示 ---
-    document.getElementById('routeInput').addEventListener('change', async (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      const text = await file.text();
-      const geojson = JSON.parse(text);
-      const layer = L.geoJSON(geojson, {
-        style: { color: '#2563eb', weight: 6, opacity: 0.8 }
-      }).addTo(map);
-      savedRouteLayers.push(layer);
-      map.fitBounds(layer.getBounds());
-      document.getElementById('statusText').innerText = "固定ルートを描画しました";
-    });
-
-    // --- GPSトラッキング ＆ 道路スナップ登録 ---
-    const btnStart = document.getElementById('btnStartTracking');
-    const btnStop = document.getElementById('btnStopTracking');
-    const trackingBar = document.getElementById('tracking-bar');
-
-    btnStart.onclick = () => {
-      if (!navigator.geolocation) return alert("GPSが利用できません");
-      isTracking = true;
-      recordedGpsLogs = [];
-      btnStart.style.display = 'none';
-      btnStop.style.display = 'inline-flex';
-      trackingBar.style.display = 'flex';
-
-      if (gpsPolyline) map.removeLayer(gpsPolyline);
-      gpsPolyline = L.polyline([], { color: '#ef4444', weight: 4 }).addTo(map);
-
-      watchId = navigator.geolocation.watchPosition((pos) => {
-        const point = {
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
-          timestamp: pos.timestamp
-        };
-        recordedGpsLogs.push(point);
-        gpsPolyline.addLatLng([point.lat, point.lng]);
-        document.getElementById('pointCount').innerText = recordedGpsLogs.length;
-      }, (err) => console.error(err), { enableHighAccuracy: true, maximumAge: 1000 });
-    };
-
-    btnStop.onclick = async () => {
-      navigator.geolocation.clearWatch(watchId);
-      isTracking = false;
-      btnStart.style.display = 'inline-flex';
-      btnStop.style.display = 'none';
-      trackingBar.style.display = 'none';
-
-      if (recordedGpsLogs.length < 5) return alert("ログ点数が少なすぎます");
-
-      document.getElementById('statusText').innerText = "走行ログを道路にスナップ中...";
-
-      const coords = recordedGpsLogs.map(p => `${p.lng},${p.lat}`).join(';');
-      const matchUrl = `https://router.project-osrm.org/match/v1/driving/${coords}?overview=full&geometries=geojson`;
-
-      try {
-        const res = await fetch(matchUrl);
-        const data = await res.json();
-        let finalGeoJson;
-
-        if (data.code === 'Ok' && data.matchings && data.matchings.length > 0) {
-          finalGeoJson = {
-            type: "Feature",
-            properties: { route_name: "走行実績ルート_" + new Date().toLocaleDateString() },
-            geometry: data.matchings[0].geometry
-          };
-        } else {
-          finalGeoJson = {
-            type: "Feature",
-            properties: { route_name: "走行実績生ログ" },
-            geometry: {
-              type: "LineString",
-              coordinates: recordedGpsLogs.map(p => [p.lng, p.lat])
-            }
-          };
-        }
-
-        const blob = new Blob([JSON.stringify(finalGeoJson, null, 2)], { type: 'application/json' });
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = `route_${Date.now()}.geojson`;
-        a.click();
-        document.getElementById('statusText').innerText = "固定ルートとして保存しました";
-      } catch (err) {
-        alert("道路吸着処理に失敗しました");
-      }
-    };
   </script>
 </body>
 </html>

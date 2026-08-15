@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>NaviSystem - 配達ドライバー</title>
+  
+  <!-- PWA設定 -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="NaviSystem">
+  <link rel="apple-touch-icon" href="icon-192.png">
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body {
+      margin: 0;
+      padding: 0;
+      width: 100vw;
+      height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: #0f172a;
+      color: #f8fafc;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* 共通ボタン */
+    .btn {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 14px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .btn-blue { background: #2563eb; color: #fff; }
+    .btn-green { background: #16a34a; color: #fff; }
+    .btn-red { background: #dc2626; color: #fff; }
+    .btn-slate { background: #334155; color: #f8fafc; }
+    .btn-outline { background: transparent; border: 1px solid #475569; color: #94a3b8; }
+
+    /* --- 1. コース選択ビュー --- */
+    #view-course-select {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 20px 16px;
+      overflow-y: auto;
+    }
+    .app-header-hero {
+      text-align: center;
+      margin: 16px 0 24px;
+    }
+    .app-title {
+      font-size: 24px;
+      font-weight: 900;
+      color: #38bdf8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .app-subtitle {
+      font-size: 13px;
+      color: #94a3b8;
+      margin-top: 4px;
+    }
+
+    .course-card-mobile {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 14px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    .course-title-mobile {
+      font-size: 16px;
+      font-weight: bold;
+      color: #f8fafc;
+      margin-bottom: 6px;
+    }
+    .course-desc-mobile {
+      font-size: 12px;
+      color: #94a3b8;
+      margin-bottom: 12px;
+    }
+    .course-stats {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      margin-bottom: 12px;
+      background: #0f172a;
+      padding: 8px 12px;
+      border-radius: 8px;
+    }
+
+    /* PWAインストール案内バナー */
+    #pwa-banner {
+      background: #172554;
+      border: 1px solid #2563eb;
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 16px;
+      font-size: 12px;
+      color: #93c5fd;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /* --- 2. 運行・ナビ画面ビュー --- */
+    #view-nav-main {
+      flex: 1;
+      display: none;
+      flex-direction: column;
+      position: relative;
+    }
+
+    /* ナビ上部バー */
+    #nav-header {
+      background: #1e293b;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #334155;
+      z-index: 1000;
+    }
+    .nav-course-title {
+      font-size: 14px;
+      font-weight: bold;
+      color: #f8fafc;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 180px;
+    }
+
+    #map-container {
+      flex: 1;
+      position: relative;
+    }
+    #map {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* 下部 配達リストシート */
+    #bottom-sheet {
+      background: #1e293b;
+      border-top: 1px solid #334155;
+      height: 220px;
+      display: flex;
+      flex-direction: column;
+      transition: height 0.3s;
+      z-index: 1000;
+    }
+    #bottom-sheet.expanded {
+      height: 70vh;
+    }
+    .sheet-handle {
+      width: 40px;
+      height: 4px;
+      background: #475569;
+      border-radius: 2px;
+      margin: 8px auto 4px;
+      cursor: pointer;
+    }
+    .sheet-header {
+      padding: 6px 14px 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      font-weight: bold;
+      border-bottom: 1px solid #334155;
+    }
+    .sheet-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 12px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .delivery-card-phone {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      font-size: 13px;
+    }
+    .delivery-card-phone.completed {
+      background: #064e3b;
+      border-color: #059669;
+      opacity: 0.8;
+    }
+
+    /* GPSトラッキング通知バー */
+    #tracking-pill {
+      position: absolute;
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid #ef4444;
+      color: #fff;
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: bold;
+      z-index: 1000;
+      display: none;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ================= 画面1: コース選択画面 ================= -->
+  <div id="view-course-select">
+    <div class="app-header-hero">
+      <div class="app-title"><span>🚚</span> NaviSystem</div>
+      <div class="app-subtitle">配達ドライバー専用アプリ</div>
+    </div>
+
+    <!-- PWA案内 -->
+    <div id="pwa-banner">
+      <span>📲 <b>ホーム画面に追加</b>すると全画面アプリとして使えます</span>
+    </div>
+
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+      <b style="font-size:15px;">本日のお届けコース</b>
+      <button class="btn btn-outline" style="padding:4px 8px; font-size:11px;" onclick="refreshCourses()">🔄 更新</button>
+    </div>
+
+    <div id="courseCardsContainer">
+      <!-- 動的コースリスト -->
+    </div>
+  </div>
+
+  <!-- ================= 画面2: 運行・ナビ画面 ================= -->
+  <div id="view-nav-main">
+    <div id="nav-header">
+      <button class="btn btn-slate" style="padding:6px 10px; font-size:12px;" onclick="exitToCourseSelect()">
+        ◀ コース一覧
+      </button>
+      <div class="nav-course-title" id="currentCourseTitle">コース名</div>
+      <div style="font-size:12px; color:#38bdf8;">
+        <span id="navDeliveredCount">0</span>/<span id="navTotalCount">0</span> 完了
+      </div>
+    </div>
+
+    <div id="map-container">
+      <div id="map"></div>
+      <div id="tracking-pill">
+        🔴 <b>GPS運行記録中</b> (<span id="gpsPointCount">0</span>点)
+      </div>
+    </div>
+
+    <!-- 下部シート -->
+    <div id="bottom-sheet">
+      <div class="sheet-handle" onclick="toggleSheet()"></div>
+      <div class="sheet-header">
+        <span>配達先リスト (<span id="sheetDoneCount">0</span>/<span id="sheetTotalCount">0</span>)</span>
+        <div style="display:flex; gap:6px;">
+          <button id="btnGpsToggle" class="btn btn-green" style="padding:4px 10px; font-size:11px;" onclick="toggleGpsTracking()">
+            ▶ GPS記録開始
+          </button>
+        </div>
+      </div>
+      <div class="sheet-list" id="deliveryCardsList"></div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    // --- Service Worker 登録 (PWA) ---
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(err => console.log('SW failed:', err));
+      });
+    }
+
+    const STORAGE_KEY = 'navisystem_courses';
+    let currentCourse = null;
+    let map = null;
+    let markers = [];
+    let currentNavLayer = null;
+
+    // GPS記録用
+    let isGpsRecording = false;
+    let gpsWatchId = null;
+    let recordedLogs = [];
+    let gpsPolyline = null;
+
+    // --- コース読み込み & 表示 ---
+    function getCourses() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) return JSON.parse(raw);
+      } catch (e) {}
+
+      // 初回サンプルコース
+      return [
+        {
+          id: 'sample_today',
+          name: '本日 奈良エリア午前配達便 (サンプル)',
+          memo: '担当: ドライバーA / ルート001',
+          createdAt: new Date().toISOString(),
+          items: [
+            { id: 1, name: "田中 太郎", address: "奈良県奈良市登大路町30", time: "午前中", memo: "置き配可（玄関前）", lat: 34.685062, lng: 135.832809, isDone: false },
+            { id: 2, name: "佐藤 次郎", address: "奈良県生駒市北新町10-38", time: "14:00-16:00", memo: "オートロック暗証1234", lat: 34.694481, lng: 135.697067, isDone: false },
+            { id: 3, name: "鈴木 三郎", address: "奈良県大和高田市大中100", time: "18:00-20:00", memo: "不在時宅配BOX", lat: 34.515060, lng: 135.737167, isDone: false },
+            { id: 4, 高橋: "高橋 四郎", name: "高橋 四郎", address: "奈良県奈良市三条栄町", time: "指定なし", memo: "道幅狭小注意", lat: 34.680706, lng: 135.808823, isDone: false }
+          ]
+        }
+      ];
+    }
+
+    function saveCourses(courses) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(courses));
+    }
+
+    function refreshCourses() {
+      const courses = getCourses();
+      const container = document.getElementById('courseCardsContainer');
+      container.innerHTML = '';
+
+      if (courses.length === 0) {
+        container.innerHTML = `
+          <div style="text-align:center; color:#94a3b8; margin-top:40px;">
+            📦 本日の配達コースはまだありません。<br>
+            <span style="font-size:12px;">PC管理画面からCSVを取り込んでコースを作成してください。</span>
+          </div>
+        `;
+        return;
+      }
+
+      courses.forEach(course => {
+        const doneCount = course.items.filter(i => i.isDone).length;
+        const totalCount = course.items.length;
+        const percent = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0;
+
+        const card = document.createElement('div');
+        card.className = 'course-card-mobile';
+        card.innerHTML = `
+          <div class="course-title-mobile">${course.name}</div>
+          <div class="course-desc-mobile">${course.memo || 'ルート配送'}</div>
+          <div class="course-stats">
+            <span>件数: <b>${totalCount}件</b></span>
+            <span style="color:#38bdf8;">進捗: <b>${doneCount}/${totalCount}</b> (${percent}%)</span>
+          </div>
+          <button class="btn btn-blue" style="width:100%;" onclick="startDeliveryCourse('${course.id}')">
+            🚚 このコースで配送開始
+          </button>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    // --- 配送開始 ---
+    window.startDeliveryCourse = function(courseId) {
+      const courses = getCourses();
+      currentCourse = courses.find(c => c.id === courseId);
+      if (!currentCourse) return alert("コースが見つかりません");
+
+      document.getElementById('view-course-select').style.display = 'none';
+      document.getElementById('view-nav-main').style.display = 'flex';
+      document.getElementById('currentCourseTitle').innerText = currentCourse.name;
+
+      initMap();
+      renderDeliveryList();
+    };
+
+    window.exitToCourseSelect = function() {
+      if (isGpsRecording) {
+        if (!confirm("GPS記録中ですがコース一覧に戻りますか？")) return;
+        toggleGpsTracking();
+      }
+      document.getElementById('view-nav-main').style.display = 'none';
+      document.getElementById('view-course-select').style.display = 'flex';
+      refreshCourses();
+    };
+
+    // --- マップ初期化 ---
+    function initMap() {
+      if (!map) {
+        map = L.map('map', { zoomControl: false }).setView([34.685, 135.805], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+          attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        L.control.zoom({ position: 'topright' }).addTo(map);
+      }
+      setTimeout(() => map.invalidateSize(), 200);
+      plotMarkers();
+    }
+
+    function plotMarkers() {
+      markers.forEach(m => map.removeLayer(m));
+      markers = [];
+
+      currentCourse.items.forEach(item => {
+        const marker = L.circleMarker([item.lat, item.lng], {
+          radius: 10,
+          fillColor: item.isDone ? "#16a34a" : "#2563eb",
+          color: "#ffffff",
+          weight: 2,
+          fillOpacity: 0.95
+        }).addTo(map);
+
+        const popupHtml = `
+          <div style="min-width:170px; font-size:12px;">
+            <b style="font-size:14px;">#${item.id} ${item.name}</b><br>
+            <span style="color:#64748b;">${item.address}</span><br>
+            ${item.time ? `<span style="color:#2563eb;">🕒 ${item.time}</span><br>` : ''}
+            ${item.memo ? `<span style="color:#d97706;">📝 ${item.memo}</span><br>` : ''}
+            <div style="display:flex; gap:6px; margin-top:8px;">
+              <button class="btn btn-blue" style="flex:1; padding:6px;" onclick="navigateToTarget(${item.id})">案内</button>
+              <button class="btn btn-green" style="flex:1; padding:6px;" onclick="toggleDeliveryDone(${item.id})">${item.isDone ? '未完' : '完了'}</button>
+            </div>
+          </div>
+        `;
+        marker.bindPopup(popupHtml);
+        markers.push(marker);
+      });
+
+      if (markers.length > 0) {
+        const group = new L.featureGroup(markers);
+        map.fitBounds(group.getBounds(), { padding: [40, 40] });
+      }
+    }
+
+    // --- 配達完了切り替え ---
+    window.toggleDeliveryDone = function(id) {
+      const item = currentCourse.items.find(it => it.id === id);
+      if (!item) return;
+
+      item.isDone = !item.isDone;
+
+      // ストレージ更新
+      const courses = getCourses();
+      const idx = courses.findIndex(c => c.id === currentCourse.id);
+      if (idx !== -1) {
+        courses[idx] = currentCourse;
+        saveCourses(courses);
+      }
+
+      plotMarkers();
+      renderDeliveryList();
+    };
+
+    // --- ナビゲーション (OSRM + Google Maps) ---
+    window.navigateToTarget = function(id) {
+      const target = currentCourse.items.find(it => it.id === id);
+      if (!target) return;
+
+      if (!navigator.geolocation) {
+        window.open(`https://www.google.com/maps/dir/?api=1&destination=${target.lat},${target.lng}`);
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(async (pos) => {
+        const curLat = pos.coords.latitude;
+        const curLng = pos.coords.longitude;
+
+        const url = `https://router.project-osrm.org/route/v1/driving/${curLng},${curLat};${target.lng},${target.lat}?overview=full&geometries=geojson`;
+        try {
+          const res = await fetch(url);
+          const data = await res.json();
+          if (data.routes && data.routes.length > 0) {
+            if (currentNavLayer) map.removeLayer(currentNavLayer);
+            currentNavLayer = L.geoJSON(data.routes[0].geometry, {
+              style: { color: '#f59e0b', weight: 6, dashArray: '4, 8' }
+            }).addTo(map);
+            map.fitBounds(currentNavLayer.getBounds(), { padding: [50, 50] });
+          }
+        } catch (e) {
+          window.open(`https://www.google.com/maps/dir/?api=1&destination=${target.lat},${target.lng}`);
+        }
+      }, () => {
+        window.open(`https://www.google.com/maps/dir/?api=1&destination=${target.lat},${target.lng}`);
+      });
+    };
+
+    // --- 配達リスト描画 ---
+    function renderDeliveryList() {
+      const doneCount = currentCourse.items.filter(i => i.isDone).length;
+      const totalCount = currentCourse.items.length;
+
+      document.getElementById('navDeliveredCount').innerText = doneCount;
+      document.getElementById('navTotalCount').innerText = totalCount;
+      document.getElementById('sheetDoneCount').innerText = doneCount;
+      document.getElementById('sheetTotalCount').innerText = totalCount;
+
+      const listEl = document.getElementById('deliveryCardsList');
+      listEl.innerHTML = '';
+
+      currentCourse.items.forEach(item => {
+        const card = document.createElement('div');
+        card.className = `delivery-card-phone ${item.isDone ? 'completed' : ''}`;
+        card.innerHTML = `
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <b>#${item.id} ${item.name}</b>
+            <span style="font-size:11px; padding:2px 6px; border-radius:4px; background:${item.isDone ? '#10b981' : '#3b82f6'}; color:#fff;">
+              ${item.isDone ? '配達完了' : (item.time || '指定なし')}
+            </span>
+          </div>
+          <div style="color:#94a3b8; font-size:11px; margin:4px 0;">${item.address}</div>
+          ${item.memo ? `<div style="color:#f59e0b; font-size:11px; margin-bottom:6px;">📝 ${item.memo}</div>` : ''}
+          <div style="display:flex; gap:8px; margin-top:6px;">
+            <button class="btn btn-blue" style="flex:1; padding:6px 8px; font-size:12px;" onclick="navigateToTarget(${item.id})">🗺️ 案内</button>
+            <button class="btn btn-green" style="flex:1; padding:6px 8px; font-size:12px;" onclick="toggleDeliveryDone(${item.id})">${item.isDone ? '↩ 未完了に戻す' : '✅ 完了'}</button>
+          </div>
+        `;
+        listEl.appendChild(card);
+      });
+    }
+
+    // --- 下部シート開閉 ---
+    window.toggleSheet = function() {
+      document.getElementById('bottom-sheet').classList.toggle('expanded');
+      setTimeout(() => map && map.invalidateSize(), 300);
+    };
+
+    // --- GPS運行ログ記録 ---
+    window.toggleGpsTracking = async function() {
+      const btn = document.getElementById('btnGpsToggle');
+      const pill = document.getElementById('tracking-pill');
+
+      if (!isGpsRecording) {
+        if (!navigator.geolocation) return alert("GPSが利用できません");
+        isGpsRecording = true;
+        recordedLogs = [];
+        btn.innerText = "⏹ 運行終了・保存";
+        btn.className = "btn btn-red";
+        pill.style.display = "block";
+
+        if (gpsPolyline) map.removeLayer(gpsPolyline);
+        gpsPolyline = L.polyline([], { color: '#ef4444', weight: 5 }).addTo(map);
+
+        gpsWatchId = navigator.geolocation.watchPosition((pos) => {
+          const pt = { lat: pos.coords.latitude, lng: pos.coords.longitude, time: pos.timestamp };
+          recordedLogs.push(pt);
+          gpsPolyline.addLatLng([pt.lat, pt.lng]);
+          document.getElementById('gpsPointCount').innerText = recordedLogs.length;
+        }, (err) => console.error(err), { enableHighAccuracy: true, maximumAge: 1000 });
+      } else {
+        navigator.geolocation.clearWatch(gpsWatchId);
+        isGpsRecording = false;
+        btn.innerText = "▶ GPS記録開始";
+        btn.className = "btn btn-green";
+        pill.style.display = "none";
+
+        if (recordedLogs.length < 5) return alert("記録されたログが少なすぎます");
+
+        // OSRM Match APIで道路スナップ
+        const coords = recordedLogs.map(p => `${p.lng},${p.lat}`).join(';');
+        const matchUrl = `https://router.project-osrm.org/match/v1/driving/${coords}?overview=full&geometries=geojson`;
+
+        try {
+          const res = await fetch(matchUrl);
+          const data = await res.json();
+          let geojson;
+          if (data.code === 'Ok' && data.matchings && data.matchings.length > 0) {
+            geojson = {
+              type: "Feature",
+              properties: { route_name: `走行実績_${currentCourse.name}_${new Date().toLocaleDateString()}` },
+              geometry: data.matchings[0].geometry
+            };
+          } else {
+            geojson = {
+              type: "Feature",
+              properties: { route_name: `生ログ_${new Date().toLocaleDateString()}` },
+              geometry: { type: "LineString", coordinates: recordedLogs.map(p => [p.lng, p.lat]) }
+            };
+          }
+
+          const blob = new Blob([JSON.stringify(geojson, null, 2)], { type: 'application/json' });
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
+          a.download = `route_${Date.now()}.geojson`;
+          a.click();
+          alert("✅ 走行ルートをGeoJSONファイルとして保存しました！");
+        } catch (e) {
+          alert("道路吸着処理に失敗しました");
+        }
+      }
+    };
+
+    // 初期化
+    refreshCourses();
+  </script>
+</body>
+</html>
