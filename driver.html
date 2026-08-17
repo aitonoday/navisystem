@@ -259,14 +259,14 @@
     .hud-actions-row { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
     .hud-fix-row-portrait { display: block; }
 
-    /* 📱 横向き（Landscape）最適化：2段にすっきり集約 */
+    /* 📱 横向き（Landscape）最適化：超スリムな完全1段（1行）レイアウト */
     @media (orientation: landscape) {
       #nav-header {
-        height: 38px;
-        padding: 4px 12px;
+        height: 36px;
+        padding: 3px 12px;
       }
       #map-container {
-        height: calc(100% - 38px);
+        height: calc(100% - 36px);
       }
       #transit-target-card {
         top: 6px;
@@ -275,10 +275,24 @@
         padding: 6px 12px;
         border-radius: 14px;
         box-shadow: 0 8px 24px rgba(4, 47, 46, 0.45);
+        display: flex !important;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
       }
-      /* 1段目: 氏名 + 住所 + 距離 + GPS + 修正 を横1行に配置 */
+      /* メモは横向き時は非表示 */
+      #transitMemoBox {
+        display: none !important;
+      }
+      /* 1段目（左側情報エリア） */
       .hud-info-row {
-        margin-bottom: 4px;
+        flex: 1;
+        margin-bottom: 0;
+        gap: 8px;
+        overflow: hidden;
+      }
+      .hud-title-group {
+        gap: 6px;
       }
       .hud-name {
         font-size: 14px;
@@ -290,15 +304,26 @@
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        max-width: 38vw;
-        margin-left: 6px;
+        max-width: 25vw;
+        margin-left: 4px;
+      }
+      .hud-status-group {
+        gap: 6px;
+      }
+      .hud-distance {
+        font-size: 11px;
+        padding: 2px 6px;
+      }
+      #tracking-indicator {
+        font-size: 9px;
+        padding: 1px 6px;
       }
       .hud-fix-link-landscape {
         display: inline-block;
         font-size: 10px;
         color: #94a3b8;
         background: rgba(255,255,255,0.12);
-        padding: 2px 6px;
+        padding: 3px 6px;
         border-radius: 4px;
         cursor: pointer;
         white-space: nowrap;
@@ -309,22 +334,24 @@
       .hud-fix-row-portrait {
         display: none !important;
       }
-      /* 2段目: 3ボタンをコンパクトに横一列配置 */
+      /* 2段目（右側ボタンエリア）: 横並びで1段に統合 */
       .hud-actions-row {
         margin-bottom: 0;
         gap: 6px;
+        flex-shrink: 0;
       }
       .hud-actions-row .btn {
-        padding: 6px 4px !important;
-        font-size: 12px !important;
+        padding: 6px 10px !important;
+        font-size: 11px !important;
         border-radius: 8px !important;
+        white-space: nowrap;
       }
       #btnRecenterLocation {
-        bottom: 12px;
-        right: 12px;
-        width: 40px;
-        height: 40px;
-        font-size: 18px;
+        bottom: 10px;
+        right: 10px;
+        width: 38px;
+        height: 38px;
+        font-size: 16px;
       }
     }
 
