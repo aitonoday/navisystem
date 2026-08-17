@@ -229,15 +229,15 @@
     /* 🚚 02. NAVIGATION 公式デザイン HUDカード（画面最上部） */
     #transit-target-card {
       position: absolute;
-      top: 10px;
-      left: 10px;
-      right: 10px;
+      top: 8px;
+      left: 8px;
+      right: 8px;
       background: linear-gradient(135deg, #042f2e 0%, #0f172a 100%);
       border: 1px solid rgba(255, 255, 255, 0.15);
-      border-radius: 18px;
-      padding: 10px 14px;
+      border-radius: 16px;
+      padding: 8px 12px;
       z-index: 1000;
-      box-shadow: 0 12px 32px rgba(4, 47, 46, 0.4), 0 2px 6px rgba(0,0,0,0.2);
+      box-shadow: 0 10px 30px rgba(4, 47, 46, 0.4), 0 2px 6px rgba(0,0,0,0.2);
       color: #ffffff;
       animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
     }
@@ -246,18 +246,25 @@
       to { opacity: 1; transform: translateY(0); }
     }
 
-    /* 縦向き・横向き共通クラス */
-    .hud-info-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; gap: 8px; }
+    /* 縦向き（デフォルト）：きっちり3段レイアウト */
+    .hud-info-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; gap: 8px; }
     .hud-title-group { display: flex; align-items: center; gap: 6px; overflow: hidden; flex: 1; }
-    .hud-order-badge { background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%); color: #fff; font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 6px; white-space: nowrap; }
-    .hud-name { font-size: 16px; font-weight: 900; color: #38bdf8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .hud-order-badge { background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%); color: #fff; font-size: 11px; font-weight: 800; padding: 2px 7px; border-radius: 6px; white-space: nowrap; }
+    .hud-name { font-size: 15px; font-weight: 900; color: #38bdf8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .hud-address-landscape { display: none; }
-    .hud-status-group { display: flex; align-items: center; gap: 6px; }
-    .hud-distance { white-space: nowrap; color: #38bdf8; font-weight: 800; background: rgba(0,0,0,0.3); padding: 1px 8px; border-radius: 6px; font-size: 11px; }
-    .hud-fix-link-landscape { display: none; }
+    .hud-status-group { display: flex; align-items: center; gap: 5px; }
+    .hud-distance-landscape { display: none; }
+    .hud-fix-btn {
+      font-size: 10px;
+      color: #94a3b8;
+      background: rgba(255,255,255,0.12);
+      padding: 2px 6px;
+      border-radius: 4px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
     .hud-address-row-portrait { display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #cbd5e1; margin-bottom: 6px; gap: 8px; }
-    .hud-actions-row { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
-    .hud-fix-row-portrait { display: block; }
+    .hud-actions-row { display: flex; gap: 6px; align-items: center; margin-bottom: 0; }
 
     /* 📱 横向き（Landscape）最適化：超スリムな完全1段（1行）レイアウト */
     @media (orientation: landscape) {
@@ -280,10 +287,6 @@
         justify-content: space-between;
         gap: 10px;
       }
-      /* メモは横向き時は非表示 */
-      #transitMemoBox {
-        display: none !important;
-      }
       /* 1段目（左側情報エリア） */
       .hud-info-row {
         flex: 1;
@@ -304,37 +307,27 @@
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        max-width: 25vw;
+        max-width: 24vw;
         margin-left: 4px;
       }
-      .hud-status-group {
-        gap: 6px;
-      }
-      .hud-distance {
+      .hud-distance-landscape {
+        display: inline-block;
         font-size: 11px;
         padding: 2px 6px;
+        white-space: nowrap;
+        color: #38bdf8;
+        font-weight: 800;
+        background: rgba(0,0,0,0.3);
+        border-radius: 6px;
       }
       #tracking-indicator {
         font-size: 9px;
         padding: 1px 6px;
       }
-      .hud-fix-link-landscape {
-        display: inline-block;
-        font-size: 10px;
-        color: #94a3b8;
-        background: rgba(255,255,255,0.12);
-        padding: 3px 6px;
-        border-radius: 4px;
-        cursor: pointer;
-        white-space: nowrap;
-      }
       .hud-address-row-portrait {
         display: none !important;
       }
-      .hud-fix-row-portrait {
-        display: none !important;
-      }
-      /* 2段目（右側ボタンエリア）: 横並びで1段に統合 */
+      /* 2段目（右側ボタンエリア）: 横一列に統合 */
       .hud-actions-row {
         margin-bottom: 0;
         gap: 6px;
@@ -488,7 +481,7 @@
       <div id="map-container">
         <!-- 🚚 02. NAVIGATION 公式デザイン HUDカード（画面最上部） -->
         <div id="transit-target-card" style="display:none;">
-          <!-- 1段目（縦向きはタイトル+GPS、横向きは住所・距離・修正リンクも1行に合体） -->
+          <!-- 1段目: 宛名・順番 ＋ GPS ＋ 地点修正リンク -->
           <div class="hud-info-row">
             <div class="hud-title-group">
               <span class="hud-order-badge">
@@ -498,42 +491,35 @@
               <span class="hud-address-landscape" id="transitAddressLandscape">住所</span>
             </div>
             <div class="hud-status-group">
-              <span class="hud-distance" id="distanceText">-- m</span>
+              <span class="hud-distance hud-distance-landscape" id="distanceTextLandscape">-- m</span>
               <div id="tracking-indicator">
                 🔴 GPS (<span id="gpsPointCount">0</span>)
               </div>
-              <span class="hud-fix-link-landscape" onclick="openLocationCorrectionModal()">📍修正</span>
+              <span class="hud-fix-btn" onclick="openLocationCorrectionModal()">📍位置修正</span>
             </div>
           </div>
 
-          <!-- 縦向き専用の2段目: 住所 ＋ 残り距離（横向きでは非表示） -->
+          <!-- 2段目（縦向き専用）: 住所 ＋ メモ ＋ 残り距離（横向きでは1段目に統合されるため非表示） -->
           <div class="hud-address-row-portrait">
-            <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1;" id="transitAddress">住所</span>
+            <div style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:flex; align-items:center; gap:6px;">
+              <span id="transitAddress" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">住所</span>
+              <span id="transitMemoInline" style="display:none; color:#f59e0b; font-weight:700; font-size:10px; background:rgba(245,158,11,0.15); padding:1px 5px; border-radius:4px; white-space:nowrap;">📝</span>
+            </div>
+            <span class="hud-distance" id="distanceText" style="white-space:nowrap; color:#38bdf8; font-weight:800; background:rgba(0,0,0,0.3); padding:1px 8px; border-radius:6px; font-size:11px;">-- m</span>
             <span id="proximityStatusBadge" style="display:none;">案内中</span>
           </div>
 
-          <div id="transitMemoBox" style="display:none; background:rgba(245, 158, 11, 0.2); border-left:2px solid #f59e0b; padding:3px 8px; font-size:11px; color:#fde68a; border-radius:0 4px 4px 0; margin-bottom:6px;">
-            📝 <span id="transitMemoText">備考メモ</span>
-          </div>
-
-          <!-- 2段目（横向き時） / 3段目（縦向き時）: 3ボタン横並び（到着・Gマップ・変更） -->
+          <!-- 3段目（縦向き時） / 2段目（横向き時）: 3ボタン横並び（到着・Gマップ・変更） -->
           <div class="hud-actions-row">
-            <button class="btn btn-green" id="mainArrivalButton" style="flex:1; padding:10px 4px; font-size:13px; font-weight:900;" onclick="onArrivalClick()">
+            <button class="btn btn-green" id="mainArrivalButton" style="flex:1; padding:9px 4px; font-size:13px; font-weight:900;" onclick="onArrivalClick()">
               📍 到着
             </button>
-            <button class="btn btn-blue" style="flex:1; padding:10px 4px; font-size:13px; font-weight:700;" onclick="openExternalGoogleMap()">
+            <button class="btn btn-blue" style="flex:1; padding:9px 4px; font-size:13px; font-weight:700;" onclick="openExternalGoogleMap()">
               🗺️ Gマップ
             </button>
-            <button class="btn btn-slate" style="flex:1; padding:10px 4px; font-size:13px; font-weight:700;" onclick="openChangeDestinationModal()">
+            <button class="btn btn-slate" style="flex:1; padding:9px 4px; font-size:13px; font-weight:700;" onclick="openChangeDestinationModal()">
               🔄 変更
             </button>
-          </div>
-
-          <!-- 縦向き専用の地点修正リンク（横向きでは1段目に収まるため非表示） -->
-          <div class="hud-fix-row-portrait" style="text-align:right;">
-            <span style="font-size:10px; color:#94a3b8; cursor:pointer; text-decoration:underline;" onclick="openLocationCorrectionModal()">
-              📍 ピンの位置が違う場合はここをタップして修正
-            </span>
           </div>
         </div>
 
@@ -918,12 +904,14 @@
       const addrLandEl = document.getElementById('transitAddressLandscape');
       if (addrLandEl) addrLandEl.innerText = `(${item.address})`;
 
-      const memoBox = document.getElementById('transitMemoBox');
-      if (item.memo) {
-        memoBox.style.display = 'block';
-        document.getElementById('transitMemoText').innerText = item.memo;
-      } else {
-        memoBox.style.display = 'none';
+      const memoInlineEl = document.getElementById('transitMemoInline');
+      if (memoInlineEl) {
+        if (item.memo) {
+          memoInlineEl.style.display = 'inline-block';
+          memoInlineEl.innerText = `📝 ${item.memo}`;
+        } else {
+          memoInlineEl.style.display = 'none';
+        }
       }
 
       currentLegLogs = [];
@@ -937,6 +925,7 @@
       if (!currentTargetItem) return;
 
       const distTextEl = document.getElementById('distanceText');
+      const distLandEl = document.getElementById('distanceTextLandscape');
       const badgeEl = document.getElementById('proximityStatusBadge');
       const arrivalBtn = document.getElementById('mainArrivalButton');
 
@@ -945,11 +934,12 @@
         distMeters = map.distance([currentUserCoords.lat, currentUserCoords.lng], [currentTargetItem.lat, currentTargetItem.lng]);
       }
 
+      let formattedDist = "測位中...";
       if (distMeters !== null) {
         if (distMeters < 1000) {
-          distTextEl.innerText = `${Math.round(distMeters)} m`;
+          formattedDist = `${Math.round(distMeters)} m`;
         } else {
-          distTextEl.innerText = `${(distMeters / 1000).toFixed(1)} km`;
+          formattedDist = `${(distMeters / 1000).toFixed(1)} km`;
         }
 
         if (distMeters <= PROXIMITY_THRESHOLD_METERS) {
@@ -962,9 +952,11 @@
           arrivalBtn.classList.remove('near-pulse');
         }
       } else {
-        distTextEl.innerText = "測位中...";
         badgeEl.innerText = "GPS接続中";
       }
+
+      distTextEl.innerText = formattedDist;
+      if (distLandEl) distLandEl.innerText = formattedDist;
     }
 
     async function calculateTransitRoute(targetItem) {
