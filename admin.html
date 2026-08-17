@@ -487,11 +487,49 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
   <script>
-    const map = L.map('map').setView([34.685062, 135.832809], 13);
-    L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', {
+    // 1. CARTO Voyager (スマートナビ地図：視認性抜群)
+    const cartoVoyager = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      maxZoom: 19,
+      subdomains: 'abcd',
+      attribution: '© <a href="https://carto.com/">CARTO</a> © <a href="https://www.openstreetmap.org/">OSM</a>'
+    });
+
+    // 2. OpenStreetMap 標準
+    const osmStandard = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© <a href="https://www.openstreetmap.org/">OpenStreetMap</a>'
+    });
+
+    // 3. 国土地理院 淡色地図
+    const gsiPale = L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png', {
       maxZoom: 18,
-      attribution: '© <a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank">国土地理院</a>'
-    }).addTo(map);
+      attribution: '© <a href="https://maps.gsi.go.jp/">国土地理院</a>'
+    });
+
+    // 4. 国土地理院 航空写真
+    const gsiPhoto = L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg', {
+      maxZoom: 18,
+      attribution: '© <a href="https://maps.gsi.go.jp/">国土地理院 航空写真</a>'
+    });
+
+    // 5. 国土地理院 標準地図
+    const gsiStd = L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', {
+      maxZoom: 18,
+      attribution: '© <a href="https://maps.gsi.go.jp/">国土地理院</a>'
+    });
+
+    const map = L.map('map', {
+      layers: [cartoVoyager] // デフォルトは最も見やすいCARTO Voyager
+    }).setView([34.685062, 135.832809], 13);
+
+    const baseMaps = {
+      "🗺️ スマートナビ (くっきり)": cartoVoyager,
+      "🚗 OpenStreetMap (標準)": osmStandard,
+      "🏢 白地図 (ピン強調)": gsiPale,
+      "🛰️ 航空写真 (リアル)": gsiPhoto,
+      "🗾 国土地理院 標準": gsiStd
+    };
+    L.control.layers(baseMaps, null, { position: 'topright' }).addTo(map);
 
     let activeMarkers = [];
     let currentParsedItems = [];

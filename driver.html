@@ -1054,15 +1054,56 @@
       alert(`🎯 #${currentTargetItem.order || currentTargetItem.id} ${currentTargetItem.name} 様の地点位置を修正し、【地点マスター】に登録しました！\n次回以降の配送でも、この正確な位置にピンが立ちます。`);
     }
 
-    // --- マップ初期化 (国土地理院 標準地図) ---
+    // --- マップ初期化 (高視認性 CARTO Voyager / OSM / 国土地理院 / 航空写真) ---
+    let tileLayers = {};
+
     function initMap() {
       if (!map) {
-        map = L.map('map', { zoomControl: false }).setView([34.685062, 135.832809], 16);
+        // 1. CARTO Voyager (スマートナビ地図：視認性抜群・道路と建物がくっきり)
+        const cartoVoyager = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+          maxZoom: 19,
+          subdomains: 'abcd',
+          attribution: '© <a href="https://carto.com/">CARTO</a> © <a href="https://www.openstreetmap.org/">OSM</a>'
+        });
 
-        L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', {
+        // 2. OpenStreetMap 標準
+        const osmStandard = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+          attribution: '© <a href="https://www.openstreetmap.org/">OpenStreetMap</a>'
+        });
+
+        // 3. 国土地理院 淡色地図
+        const gsiPale = L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png', {
           maxZoom: 18,
-          attribution: '© <a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank">国土地理院</a>'
-        }).addTo(map);
+          attribution: '© <a href="https://maps.gsi.go.jp/">国土地理院</a>'
+        });
+
+        // 4. 国土地理院 航空写真
+        const gsiPhoto = L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg', {
+          maxZoom: 18,
+          attribution: '© <a href="https://maps.gsi.go.jp/">国土地理院 航空写真</a>'
+        });
+
+        // 5. 国土地理院 標準地図
+        const gsiStd = L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', {
+          maxZoom: 18,
+          attribution: '© <a href="https://maps.gsi.go.jp/">国土地理院</a>'
+        });
+
+        map = L.map('map', { 
+          zoomControl: false,
+          layers: [cartoVoyager] // デフォルトは最も見やすいCARTO Voyager
+        }).setView([34.685062, 135.832809], 16);
+
+        // レイヤー切替スイッチャー（左下に配置）
+        const baseMaps = {
+          "🗺️ スマートナビ (くっきり)": cartoVoyager,
+          "🚗 OpenStreetMap (標準)": osmStandard,
+          "🏢 白地図 (ピン強調)": gsiPale,
+          "🛰️ 航空写真 (リアル)": gsiPhoto,
+          "🗾 国土地理院 標準": gsiStd
+        };
+        L.control.layers(baseMaps, null, { position: 'bottomleft' }).addTo(map);
 
         L.control.zoom({ position: 'topright' }).addTo(map);
 
