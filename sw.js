@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lively-navi-v11-force-refresh';
+const CACHE_NAME = 'lively-navi-v12-orientation-fix';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
