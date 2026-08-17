@@ -246,6 +246,88 @@
       to { opacity: 1; transform: translateY(0); }
     }
 
+    /* 縦向き・横向き共通クラス */
+    .hud-info-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; gap: 8px; }
+    .hud-title-group { display: flex; align-items: center; gap: 6px; overflow: hidden; flex: 1; }
+    .hud-order-badge { background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%); color: #fff; font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 6px; white-space: nowrap; }
+    .hud-name { font-size: 16px; font-weight: 900; color: #38bdf8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .hud-address-landscape { display: none; }
+    .hud-status-group { display: flex; align-items: center; gap: 6px; }
+    .hud-distance { white-space: nowrap; color: #38bdf8; font-weight: 800; background: rgba(0,0,0,0.3); padding: 1px 8px; border-radius: 6px; font-size: 11px; }
+    .hud-fix-link-landscape { display: none; }
+    .hud-address-row-portrait { display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #cbd5e1; margin-bottom: 6px; gap: 8px; }
+    .hud-actions-row { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
+    .hud-fix-row-portrait { display: block; }
+
+    /* 📱 横向き（Landscape）最適化：2段にすっきり集約 */
+    @media (orientation: landscape) {
+      #nav-header {
+        height: 38px;
+        padding: 4px 12px;
+      }
+      #map-container {
+        height: calc(100% - 38px);
+      }
+      #transit-target-card {
+        top: 6px;
+        left: 8px;
+        right: 8px;
+        padding: 6px 12px;
+        border-radius: 14px;
+        box-shadow: 0 8px 24px rgba(4, 47, 46, 0.45);
+      }
+      /* 1段目: 氏名 + 住所 + 距離 + GPS + 修正 を横1行に配置 */
+      .hud-info-row {
+        margin-bottom: 4px;
+      }
+      .hud-name {
+        font-size: 14px;
+      }
+      .hud-address-landscape {
+        display: inline-block;
+        font-size: 11px;
+        color: #cbd5e1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 38vw;
+        margin-left: 6px;
+      }
+      .hud-fix-link-landscape {
+        display: inline-block;
+        font-size: 10px;
+        color: #94a3b8;
+        background: rgba(255,255,255,0.12);
+        padding: 2px 6px;
+        border-radius: 4px;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      .hud-address-row-portrait {
+        display: none !important;
+      }
+      .hud-fix-row-portrait {
+        display: none !important;
+      }
+      /* 2段目: 3ボタンをコンパクトに横一列配置 */
+      .hud-actions-row {
+        margin-bottom: 0;
+        gap: 6px;
+      }
+      .hud-actions-row .btn {
+        padding: 6px 4px !important;
+        font-size: 12px !important;
+        border-radius: 8px !important;
+      }
+      #btnRecenterLocation {
+        bottom: 12px;
+        right: 12px;
+        width: 40px;
+        height: 40px;
+        font-size: 18px;
+      }
+    }
+
     /* 2択選択モーダル（フローティングカード） */
     #select-next-modal {
       position: absolute;
@@ -379,23 +461,27 @@
       <div id="map-container">
         <!-- 🚚 02. NAVIGATION 公式デザイン HUDカード（画面最上部） -->
         <div id="transit-target-card" style="display:none;">
-          <!-- 1段目: 配達順・氏名 ＋ GPS記録中 -->
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; gap:8px;">
-            <div style="display:flex; align-items:center; gap:6px; overflow:hidden; flex:1;">
-              <span style="background:linear-gradient(135deg, #0d9488 0%, #0f766e 100%); color:#fff; font-size:11px; font-weight:800; padding:2px 8px; border-radius:6px; white-space:nowrap;">
+          <!-- 1段目（縦向きはタイトル+GPS、横向きは住所・距離・修正リンクも1行に合体） -->
+          <div class="hud-info-row">
+            <div class="hud-title-group">
+              <span class="hud-order-badge">
                 #<span id="transitOrderNum">1</span>
               </span>
-              <span style="font-size:16px; font-weight:900; color:#38bdf8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" id="transitName">宛名 様</span>
+              <span class="hud-name" id="transitName">宛名 様</span>
+              <span class="hud-address-landscape" id="transitAddressLandscape">住所</span>
             </div>
-            <div id="tracking-indicator">
-              🔴 GPS (<span id="gpsPointCount">0</span>)
+            <div class="hud-status-group">
+              <span class="hud-distance" id="distanceText">-- m</span>
+              <div id="tracking-indicator">
+                🔴 GPS (<span id="gpsPointCount">0</span>)
+              </div>
+              <span class="hud-fix-link-landscape" onclick="openLocationCorrectionModal()">📍修正</span>
             </div>
           </div>
 
-          <!-- 2段目: 住所 ＋ 残り距離 -->
-          <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px; color:#cbd5e1; margin-bottom:6px; gap:8px;">
+          <!-- 縦向き専用の2段目: 住所 ＋ 残り距離（横向きでは非表示） -->
+          <div class="hud-address-row-portrait">
             <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1;" id="transitAddress">住所</span>
-            <span style="white-space:nowrap; color:#38bdf8; font-weight:800; background:rgba(0,0,0,0.3); padding:1px 8px; border-radius:6px;" id="distanceText">-- m</span>
             <span id="proximityStatusBadge" style="display:none;">案内中</span>
           </div>
 
@@ -403,8 +489,8 @@
             📝 <span id="transitMemoText">備考メモ</span>
           </div>
 
-          <!-- 3段目: 3ボタン横並び（到着・Gマップ・変更：すべて等幅同一サイズ） -->
-          <div style="display:flex; gap:8px; align-items:center; margin-bottom:6px;">
+          <!-- 2段目（横向き時） / 3段目（縦向き時）: 3ボタン横並び（到着・Gマップ・変更） -->
+          <div class="hud-actions-row">
             <button class="btn btn-green" id="mainArrivalButton" style="flex:1; padding:10px 4px; font-size:13px; font-weight:900;" onclick="onArrivalClick()">
               📍 到着
             </button>
@@ -416,8 +502,8 @@
             </button>
           </div>
 
-          <!-- 地点修正リンク -->
-          <div style="text-align:right;">
+          <!-- 縦向き専用の地点修正リンク（横向きでは1段目に収まるため非表示） -->
+          <div class="hud-fix-row-portrait" style="text-align:right;">
             <span style="font-size:10px; color:#94a3b8; cursor:pointer; text-decoration:underline;" onclick="openLocationCorrectionModal()">
               📍 ピンの位置が違う場合はここをタップして修正
             </span>
@@ -802,6 +888,8 @@
       document.getElementById('transitOrderNum').innerText = item.order || item.id;
       document.getElementById('transitName').innerText = `${item.name} 様`;
       document.getElementById('transitAddress').innerText = item.address;
+      const addrLandEl = document.getElementById('transitAddressLandscape');
+      if (addrLandEl) addrLandEl.innerText = `(${item.address})`;
 
       const memoBox = document.getElementById('transitMemoBox');
       if (item.memo) {
@@ -1216,6 +1304,20 @@
         });
       }
     }
+
+    // 画面回転・リサイズ時の地図再描画
+    window.addEventListener('resize', () => {
+      if (map) {
+        setTimeout(() => map.invalidateSize(), 100);
+        setTimeout(() => map.invalidateSize(), 300);
+      }
+    });
+    window.addEventListener('orientationchange', () => {
+      if (map) {
+        setTimeout(() => map.invalidateSize(), 150);
+        setTimeout(() => map.invalidateSize(), 400);
+      }
+    });
 
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', initDriverApp);
