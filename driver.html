@@ -459,8 +459,9 @@
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
         <b style="font-size:16px; font-weight:800; color:#0f172a;">本日のお届けコース</b>
         <div style="display:flex; gap:6px;">
-          <button class="btn btn-white" style="padding:4px 10px; font-size:11px;" onclick="refreshCourses()">🔄 更新</button>
-          <button class="btn btn-white" style="padding:4px 10px; font-size:11px; color:#0d9488;" onclick="forceClearCacheAndReload()">⚡ 最新化</button>
+          <button class="btn btn-white" style="padding:4px 8px; font-size:11px;" onclick="openMapSelectorModal()">🗺️ 地図切替</button>
+          <button class="btn btn-white" style="padding:4px 8px; font-size:11px;" onclick="refreshCourses()">🔄 更新</button>
+          <button class="btn btn-white" style="padding:4px 8px; font-size:11px; color:#0d9488;" onclick="forceClearCacheAndReload()">⚡ 最新化</button>
         </div>
       </div>
 
@@ -473,11 +474,13 @@
     <div id="view-nav-main">
       <!-- 上部ヘッダー -->
       <div id="nav-header">
-        <button class="btn btn-white" style="padding:6px 12px; font-size:12px;" onclick="exitToCourseSelect()">
+        <button class="btn btn-white" style="padding:6px 10px; font-size:12px;" onclick="exitToCourseSelect()">
           ◀ コース一覧
         </button>
-        <img src="logo.svg" alt="LIVELY NAVI" style="height: 22px; display: block;">
-        <div style="font-size:12px; color:#0d9488; font-weight:800; background:#f0fdfa; border:1px solid #ccfbf1; padding:3px 10px; border-radius:12px;">
+        <button class="btn btn-white" style="padding:5px 10px; font-size:12px; font-weight:700; color:#0f172a; border-color:#cbd5e1;" onclick="openMapSelectorModal()">
+          🗺️ 地図変更
+        </button>
+        <div style="font-size:12px; color:#0d9488; font-weight:800; background:#f0fdfa; border:1px solid #ccfbf1; padding:3px 8px; border-radius:12px;">
           <span id="navDeliveredCount">0</span>/<span id="navTotalCount">0</span> 完了
         </div>
       </div>
@@ -574,56 +577,59 @@
             📍
           </button>
         </div>
+      </div>
 
-        <!-- 🗺️ 地図の種類 選択モーダルパネル -->
-        <div id="map-selector-modal" style="position:absolute; bottom:80px; right:16px; left:16px; max-width:360px; margin:0 auto; z-index:2500; background:rgba(255,255,255,0.96); backdrop-filter:blur(12px); border:1.5px solid #e2e8f0; border-radius:20px; padding:18px; box-shadow:0 20px 50px rgba(15,23,42,0.25); display:none;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid #f1f5f9; padding-bottom:8px;">
-            <b style="font-size:15px; color:#0f172a; font-weight:800;">🗺️ 地図の種類を選択 (無料)</b>
-            <button class="btn btn-white" style="padding:2px 8px; font-size:11px;" onclick="closeMapSelectorModal()">✕</button>
+      <!-- 🗺️ 地図の種類 選択モーダルパネル (最前面オーバーレイ) -->
+      <div id="map-selector-modal" style="position:fixed; top:0; left:0; right:0; bottom:0; z-index:9999; background:rgba(15,23,42,0.5); backdrop-filter:blur(6px); display:none; align-items:center; justify-content:center; padding:16px;">
+        <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:24px; padding:22px; max-width:380px; width:100%; box-shadow:0 24px 60px rgba(15,23,42,0.3); animation:fadeIn 0.2s cubic-bezier(0.16,1,0.3,1);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid #f1f5f9; padding-bottom:10px;">
+            <b style="font-size:16px; color:#0f172a; font-weight:800;">🗺️ 地図の種類を選択 (無料)</b>
+            <button class="btn btn-white" style="padding:4px 10px; font-size:12px;" onclick="closeMapSelectorModal()">✕ 閉じる</button>
           </div>
 
           <div style="display:flex; flex-direction:column; gap:8px;">
-            <button class="btn btn-white map-choice-btn" id="mapChoice_carto" style="justify-content:flex-start; padding:10px 14px; font-size:13px; border-color:#0d9488; background:#f0fdfa;" onclick="switchMapLayer('carto')">
-              <span style="font-size:16px;">🗺️</span>
+            <button class="btn btn-white map-choice-btn" id="mapChoice_carto" style="justify-content:flex-start; padding:11px 14px; font-size:13px; border-color:#0d9488; background:#f0fdfa;" onclick="switchMapLayer('carto')">
+              <span style="font-size:20px; margin-right:4px;">🗺️</span>
               <div style="text-align:left;">
                 <b style="color:#0d9488; display:block;">スマートナビ (CARTO) 【推奨】</b>
-                <span style="font-size:10px; color:#64748b;">道路や建物がくっきり見やすい</span>
+                <span style="font-size:11px; color:#64748b;">道路や建物がくっきり見やすい</span>
               </div>
             </button>
 
-            <button class="btn btn-white map-choice-btn" id="mapChoice_osm" style="justify-content:flex-start; padding:10px 14px; font-size:13px;" onclick="switchMapLayer('osm')">
-              <span style="font-size:16px;">🚗</span>
+            <button class="btn btn-white map-choice-btn" id="mapChoice_osm" style="justify-content:flex-start; padding:11px 14px; font-size:13px;" onclick="switchMapLayer('osm')">
+              <span style="font-size:20px; margin-right:4px;">🚗</span>
               <div style="text-align:left;">
                 <b style="color:#0f172a; display:block;">OpenStreetMap (標準)</b>
-                <span style="font-size:10px; color:#64748b;">道路が太く店舗がカラフル</span>
+                <span style="font-size:11px; color:#64748b;">道路が太く店舗がカラフル</span>
               </div>
             </button>
 
-            <button class="btn btn-white map-choice-btn" id="mapChoice_photo" style="justify-content:flex-start; padding:10px 14px; font-size:13px;" onclick="switchMapLayer('photo')">
-              <span style="font-size:16px;">🛰️</span>
+            <button class="btn btn-white map-choice-btn" id="mapChoice_photo" style="justify-content:flex-start; padding:11px 14px; font-size:13px;" onclick="switchMapLayer('photo')">
+              <span style="font-size:20px; margin-right:4px;">🛰️</span>
               <div style="text-align:left;">
                 <b style="color:#0f172a; display:block;">航空写真 (リアル衛星画像)</b>
-                <span style="font-size:10px; color:#64748b;">建物の形や駐車場がそのまま見える</span>
+                <span style="font-size:11px; color:#64748b;">建物の形や駐車場がそのまま見える</span>
               </div>
             </button>
 
-            <button class="btn btn-white map-choice-btn" id="mapChoice_pale" style="justify-content:flex-start; padding:10px 14px; font-size:13px;" onclick="switchMapLayer('pale')">
-              <span style="font-size:16px;">🏢</span>
+            <button class="btn btn-white map-choice-btn" id="mapChoice_pale" style="justify-content:flex-start; padding:11px 14px; font-size:13px;" onclick="switchMapLayer('pale')">
+              <span style="font-size:20px; margin-right:4px;">🏢</span>
               <div style="text-align:left;">
                 <b style="color:#0f172a; display:block;">白地図 (国土地理院 淡色)</b>
-                <span style="font-size:10px; color:#64748b;">ピンとルート線が最も際立つ</span>
+                <span style="font-size:11px; color:#64748b;">ピンとルート線が最も際立つ</span>
               </div>
             </button>
 
-            <button class="btn btn-white map-choice-btn" id="mapChoice_std" style="justify-content:flex-start; padding:10px 14px; font-size:13px;" onclick="switchMapLayer('std')">
-              <span style="font-size:16px;">🗾</span>
+            <button class="btn btn-white map-choice-btn" id="mapChoice_std" style="justify-content:flex-start; padding:11px 14px; font-size:13px;" onclick="switchMapLayer('std')">
+              <span style="font-size:20px; margin-right:4px;">🗾</span>
               <div style="text-align:left;">
                 <b style="color:#0f172a; display:block;">国土地理院 (標準地図)</b>
-                <span style="font-size:10px; color:#64748b;">従来の地形図</span>
+                <span style="font-size:11px; color:#64748b;">従来の地形図</span>
               </div>
             </button>
           </div>
         </div>
+      </div>
       </div>
 
       <!-- ================= 2択選択モーダル（画面最上部にフローティング配置） ================= -->
@@ -653,10 +659,10 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <script src="firebase-sync.js"></script>
   <script>
-    // --- Service Worker 強制更新 ---
+    // --- Service Worker 強制更新 (v11) ---
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=7').then((reg) => {
+        navigator.serviceWorker.register('sw.js?v=11').then((reg) => {
           reg.update();
         }).catch(err => console.log('SW registration failed:', err));
       });

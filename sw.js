@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lively-navi-v6-ultra-compact';
+const CACHE_NAME = 'lively-navi-v11-force-refresh';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
