@@ -219,11 +219,16 @@
       height: calc(100% - 50px);
       position: relative;
       background: #f1f5f9;
+      overflow: hidden;
     }
     #map {
-      width: 100%;
-      height: 100%;
+      width: 140%;
+      height: 140%;
+      margin-left: -20%;
+      margin-top: -20%;
       background: #f1f5f9;
+      transform-origin: center center;
+      transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     /* 🚚 02. NAVIGATION 公式デザイン HUDカード（画面最上部） */
@@ -552,10 +557,18 @@
         <!-- 地図本体（全画面） -->
         <div id="map"></div>
 
-        <!-- 📍 現在地へセンタリングするフローティングボタン -->
-        <button id="btnRecenterLocation" class="btn btn-white" style="position:absolute; bottom:24px; right:16px; z-index:1000; border-radius:50%; width:50px; height:50px; padding:0; box-shadow:0 8px 24px rgba(0,0,0,0.15); font-size:22px; color:#0d9488; border:1px solid #e2e8f0;" onclick="centerOnUserLocation()" title="現在地を中心にする">
-          📍
-        </button>
+        <!-- 右下フローティングコントロール（進行方向上切替 ＆ 現在地センタリング） -->
+        <div style="position:absolute; bottom:20px; right:16px; z-index:1000; display:flex; flex-direction:column; gap:10px; align-items:center;">
+          <!-- 🧭 進行方向上（ヘディングアップ）切替ボタン -->
+          <button id="btnToggleHeadingUp" class="btn btn-primary" style="border-radius:50%; width:46px; height:46px; padding:0; box-shadow:0 6px 20px rgba(13,148,136,0.4); font-size:20px;" onclick="toggleHeadingUpMode()" title="進行方向を上にする / 北を上にする">
+            🧭
+          </button>
+
+          <!-- 📍 現在地へセンタリングするボタン -->
+          <button id="btnRecenterLocation" class="btn btn-white" style="border-radius:50%; width:46px; height:46px; padding:0; box-shadow:0 6px 16px rgba(0,0,0,0.12); font-size:20px; color:#0d9488; border:1px solid #e2e8f0;" onclick="centerOnUserLocation()" title="現在地を中心にする">
+            📍
+          </button>
+        </div>
       </div>
 
       <!-- ================= 2択選択モーダル（画面最上部にフローティング配置） ================= -->
@@ -1071,6 +1084,73 @@
       setTimeout(() => map.invalidateSize(), 500);
     }
 
+    // --- 🧭 進行方向上（ヘディングアップ）回転制御 ---
+    let isHeadingUpMode = true; // デフォルトで進行方向が上
+    let currentHeading = 0;
+    let prevGpsCoords = null;
+
+    // 2地点間の進行方位角（0〜360度）を計算
+    function calculateBearing(lat1, lng1, lat2, lng2) {
+      const toRad = deg => (deg * Math.PI) / 180;
+      const toDeg = rad => (rad * 180) / Math.PI;
+      const dLng = toRad(lng2 - lng1);
+      const rLat1 = toRad(lat1);
+      const rLat2 = toRad(lat2);
+      const y = Math.sin(dLng) * Math.cos(rLat2);
+      const x = Math.cos(rLat1) * Math.sin(rLat2) - Math.sin(rLat1) * Math.cos(rLat2) * Math.cos(dLng);
+      const brng = toDeg(Math.atan2(y, x));
+      return (brng + 360) % 360;
+    }
+
+    // 地図の回転を適用
+    function applyMapRotation(heading) {
+      currentHeading = heading;
+      const mapEl = document.getElementById('map');
+      const btn = document.getElementById('btnToggleHeadingUp');
+
+      if (!mapEl) return;
+
+      if (isHeadingUpMode) {
+        mapEl.style.transform = `rotate(${-heading}deg)`;
+        if (btn) {
+          btn.innerHTML = '🧭';
+          btn.className = 'btn btn-primary';
+          btn.title = '現在: 進行方向が上 (タップで北固定)';
+        }
+      } else {
+        mapEl.style.transform = 'rotate(0deg)';
+        if (btn) {
+          btn.innerHTML = '🔺N';
+          btn.className = 'btn btn-white';
+          btn.style.color = '#0d9488';
+          btn.title = '現在: 北が上 (タップで進行方向上)';
+        }
+      }
+    }
+
+    window.toggleHeadingUpMode = function() {
+      isHeadingUpMode = !isHeadingUpMode;
+      applyMapRotation(currentHeading);
+    };
+
+    // 端末のコンパス（ジャイロセンサー）追従
+    if (window.DeviceOrientationEvent) {
+      window.addEventListener('deviceorientation', (e) => {
+        if (!isHeadingUpMode) return;
+        // iOS: webkitCompassHeading, Android: alpha
+        let compHeading = e.webkitCompassHeading;
+        if (typeof compHeading !== 'number' && typeof e.alpha === 'number') {
+          compHeading = (360 - e.alpha) % 360;
+        }
+        if (typeof compHeading === 'number' && !isNaN(compHeading)) {
+          // GPSで速度が出ていない時は端末のコンパスを採用
+          if (!currentUserCoords || !currentUserCoords.speed || currentUserCoords.speed < 1) {
+            applyMapRotation(compHeading);
+          }
+        }
+      }, true);
+    }
+
     window.centerOnUserLocation = function() {
       if (currentUserCoords && map) {
         shouldCenterOnUser = true;
@@ -1257,6 +1337,26 @@
         currentLegLogs.push(pt);
         gpsPolyline.addLatLng([pt.lat, pt.lng]);
         document.getElementById('gpsPointCount').innerText = recordedLogs.length;
+
+        // 🧭 進行方向（ヘディング）の計算と地図回転
+        let heading = pos.coords.heading;
+        if (typeof heading !== 'number' || isNaN(heading) || heading === null) {
+          if (prevGpsCoords) {
+            const dist = map.distance([prevGpsCoords.lat, prevGpsCoords.lng], [pt.lat, pt.lng]);
+            if (dist >= 2) { // 2m以上移動したら進行方位を計算
+              heading = calculateBearing(prevGpsCoords.lat, prevGpsCoords.lng, pt.lat, pt.lng);
+            } else {
+              heading = currentHeading;
+            }
+          } else {
+            heading = 0;
+          }
+        }
+        prevGpsCoords = pt;
+
+        if (isHeadingUpMode && heading !== null && !isNaN(heading)) {
+          applyMapRotation(heading);
+        }
 
         updateCarMarker(pt.lat, pt.lng);
 
