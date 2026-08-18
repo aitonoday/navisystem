@@ -714,10 +714,10 @@
     // キャッシュ互換性用（古いキャッシュが残っている端末でのエラーを100%防止）
     window.hookMapTouchRotation = function() {};
 
-    // --- Service Worker 強制更新 (v24) ---
+    // --- Service Worker 強制更新 (v25) ---
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=24').then((reg) => {
+        navigator.serviceWorker.register('sw.js?v=25').then((reg) => {
           reg.update();
         }).catch(err => console.log('SW registration failed:', err));
       });
@@ -1564,6 +1564,15 @@
 
     // 初期化 & クラウドコース購読 & 運行セッション自動復元
     function initDriverApp() {
+      // 画面1(view-course-select)内の不要な「地図切替」ボタンを強制完全除去
+      try {
+        document.querySelectorAll('#view-course-select button').forEach(b => {
+          if (b.innerText.includes('地図切替') || (b.getAttribute('onclick') && b.getAttribute('onclick').includes('openMapSelectorModal'))) {
+            b.remove();
+          }
+        });
+      } catch (e) {}
+
       // 📱 QRコード / 共有リンクからの自動インポート (#import=...)
       try {
         const hash = window.location.hash;

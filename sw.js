@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lively-navi-v24-clean-home-buttons';
+const CACHE_NAME = 'lively-navi-v25-force-dom-clean';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
