@@ -715,10 +715,10 @@
     // キャッシュ互換性用（古いキャッシュが残っている端末でのエラーを100%防止）
     window.hookMapTouchRotation = function() {};
 
-    // --- Service Worker 強制更新 (v22) ---
+    // --- Service Worker 強制更新 (v23) ---
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=22').then((reg) => {
+        navigator.serviceWorker.register('sw.js?v=23').then((reg) => {
           reg.update();
         }).catch(err => console.log('SW registration failed:', err));
       });
@@ -1276,8 +1276,16 @@
 
         L.control.zoom({ position: 'topright' }).addTo(map);
 
+        // ユーザーがドラッグ移動したら追従を一時停止
         map.on('dragstart', () => {
           shouldCenterOnUser = false;
+        });
+
+        // ユーザーが拡大・縮小したズームレベルを保持
+        map.on('zoomend', () => {
+          if (map) {
+            // 現在のズーム倍率を維持
+          }
         });
 
         // 地図タップによる地点修正
@@ -1309,13 +1317,14 @@
     window.centerOnUserLocation = function() {
       if (currentUserCoords && map) {
         shouldCenterOnUser = true;
-        map.setView([currentUserCoords.lat, currentUserCoords.lng], 17);
+        // ユーザーが変更したズームレベルを維持したまま現在地を中央に配置
+        map.setView([currentUserCoords.lat, currentUserCoords.lng], map.getZoom(), { animate: true });
       } else {
         alert("GPS測位中です。少々お待ちください。");
       }
     };
 
-    // --- 🎯 現在地マーカー（三角なし・青色パルスドットで安定表示） ---
+    // --- 🎯 現在地マーカー（拡大・縮小したズームレベルを完全保持） ---
     function updateCarMarker(lat, lng) {
       const isFirstFix = !currentUserCoords;
       currentUserCoords = { lat, lng };
@@ -1340,7 +1349,9 @@
       }
 
       if (shouldCenterOnUser || isFirstFix) {
-        map.setView([lat, lng], 16);
+        // 固定ズーム(16)で上書きせず、ユーザーが拡大・縮小した倍率を100%保持
+        const currentZoom = isFirstFix ? 16 : map.getZoom();
+        map.setView([lat, lng], currentZoom, { animate: false });
       }
 
       checkProximityToTarget();
@@ -1354,12 +1365,12 @@
         if (data.routes && data.routes.length > 0) {
           if (currentRouteLayer) map.removeLayer(currentRouteLayer);
           currentRouteLayer = L.geoJSON(data.routes[0].geometry, {
-            style: { color: '#0284c7', weight: 8, opacity: 0.95 } // 鮮やかなエレクトリックブルー
+            style: { color: '#0284c7', weight: 8, opacity: 0.95 }
           }).addTo(map);
-          map.setView([lat1, lng1], 16);
+          map.setView([lat1, lng1], map.getZoom(), { animate: false });
         }
       } catch (e) {
-        map.setView([lat1, lng1], 16);
+        map.setView([lat1, lng1], map.getZoom(), { animate: false });
       }
     }
 

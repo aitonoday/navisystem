@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lively-navi-v22-kill-cache-errors';
+const CACHE_NAME = 'lively-navi-v23-persistent-zoom';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
