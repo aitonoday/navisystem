@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lively-navi-v14-weekly-format-standard';
+const CACHE_NAME = 'lively-navi-v15-customer-code-fix';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();

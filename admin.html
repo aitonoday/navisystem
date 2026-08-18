@@ -800,7 +800,8 @@
       const menuWeekIdx = header.findIndex(h => h.includes('メニュー週') || h.includes('週'));
       const courseNameIdx = header.findIndex(h => h.includes('コース名') || h.includes('コースコード') || h.includes('コース'));
       const baseNameIdx = header.findIndex(h => h.includes('拠点名') || h.includes('拠点'));
-      const nameIdx = header.findIndex(h => h.includes('顧客名') || h.includes('顧客') || h.includes('お名前') || h.includes('氏名'));
+      const custCodeIdx = header.findIndex(h => h === '顧客コード' || h === '会員コード' || h.includes('顧客コード'));
+      const nameIdx = header.findIndex(h => h === '顧客名' || h === '氏名' || h === 'お名前' || (h.includes('名') && !h.includes('コード') && !h.includes('拠点') && !h.includes('コース')));
       const addrIdx = header.findIndex(h => h.includes('住所') || h.includes('番地') || h.includes('先'));
       const buildingIdx = header.findIndex(h => h.includes('ビルアパート名') || h.includes('建物') || h.includes('アパート'));
       const orderIdx = header.findIndex(h => h.includes('配達順') || h.includes('順') || h.includes('No'));
@@ -808,7 +809,7 @@
       const placeIdx = header.findIndex(h => h.includes('置き場所') || h.includes('置場'));
       const timeIdx = header.findIndex(h => h.includes('時間') || h.includes('指定'));
 
-      const actualNameIdx = nameIdx !== -1 ? nameIdx : 0;
+      const actualNameIdx = nameIdx !== -1 ? nameIdx : (custCodeIdx !== -1 ? custCodeIdx : 0);
       const actualAddrIdx = addrIdx !== -1 ? addrIdx : 1;
 
       // 🏷️ コースタイトルの自動生成: 「メニュー週」と「コース名」で構成
@@ -853,7 +854,8 @@
           }
         }
 
-        const name = (nameIdx !== -1 && row[nameIdx]) ? String(row[nameIdx]).trim() : `配達先 ${i}`;
+        const customerCode = custCodeIdx !== -1 && row[custCodeIdx] ? String(row[custCodeIdx]).trim() : '';
+        const customerName = nameIdx !== -1 && row[nameIdx] ? String(row[nameIdx]).trim() : `配達先 ${i}`;
         const rawOrder = orderIdx !== -1 && row[orderIdx] ? parseInt(row[orderIdx], 10) : i;
         const orderVal = isNaN(rawOrder) ? i : rawOrder;
 
@@ -876,7 +878,7 @@
 
         // 1. 地点補正マスターを優先検索
         if (window.findCorrectedCoords) {
-          const master = findCorrectedCoords(rawAddress, name);
+          const master = findCorrectedCoords(rawAddress, customerName);
           if (master) {
             coords = { lat: master.lat, lng: master.lng };
             isFromMaster = true;
@@ -891,7 +893,8 @@
         const item = {
           id: i,
           order: orderVal,
-          name: name,
+          code: customerCode,
+          name: customerName, // 👤 顧客名のみ
           address: rawAddress,
           time: time,
           memo: memoText,
@@ -966,15 +969,17 @@
       return result;
     }
 
+    // 📋 配達先一覧プレビュー表示（顧客コード ＋ 顧客名）
     function renderPreviewList() {
       const previewEl = document.getElementById('previewList');
       previewEl.innerHTML = '';
       currentParsedItems.forEach(item => {
         const div = document.createElement('div');
         div.className = 'delivery-item';
+        const codeDisplay = item.code ? `<span style="font-size:10px; color:#64748b; background:#f1f5f9; padding:1px 5px; border-radius:4px; margin-right:4px;">[${item.code}]</span>` : '';
         div.innerHTML = `
           <div style="display:flex; justify-content:space-between; align-items:center;">
-            <b>#${item.order || item.id} ${item.name}</b>
+            <b>#${item.order || item.id} ${codeDisplay}${item.name} 様</b>
             <span style="font-size:11px; color:#0d9488; font-weight:700;">${item.time || '指定なし'}</span>
           </div>
           <div style="color:#64748b; font-size:11px; margin-top:2px;">${item.address}</div>

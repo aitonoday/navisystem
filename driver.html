@@ -707,10 +707,10 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <script src="firebase-sync.js"></script>
   <script>
-    // --- Service Worker 強制更新 (v14) ---
+    // --- Service Worker 強制更新 (v15) ---
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=14').then((reg) => {
+        navigator.serviceWorker.register('sw.js?v=15').then((reg) => {
           reg.update();
         }).catch(err => console.log('SW registration failed:', err));
       });
@@ -957,9 +957,10 @@
       currentCourse.items.forEach(item => {
         const card = document.createElement('div');
         card.className = `dest-select-card ${item.isDone ? 'completed' : ''}`;
+        const codeDisplay = item.code ? `<span style="font-size:11px; color:#64748b; background:#f1f5f9; padding:1px 5px; border-radius:4px; margin-right:4px;">[${item.code}]</span>` : '';
         card.innerHTML = `
           <div style="display:flex; justify-content:space-between; align-items:center;">
-            <b style="font-size:15px; font-weight:800; color:#0f172a;">#${item.order || item.id} ${item.name} 様</b>
+            <b style="font-size:15px; font-weight:800; color:#0f172a;">#${item.order || item.id} ${codeDisplay}${item.name} 様</b>
             <span style="font-size:11px; padding:2px 8px; border-radius:10px; font-weight:700; background:${item.isDone ? '#10b981' : '#0d9488'}; color:#fff;">
               ${item.isDone ? '✅ 配達済' : '未配達'}
             </span>
