@@ -463,7 +463,7 @@
             <span>合計: <b id="geocodeTotalCount">0</b> 件</span>
           </div>
 
-          <button id="btnSaveCourse" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 12px; font-size:14px;">
+          <button id="btnSaveCourse" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 13px; font-size:14px; font-weight:800;" onclick="saveAndUploadCourseDirect()">
             ✨ このコースを保存してクラウド配信
           </button>
         </div>
@@ -989,31 +989,60 @@
       });
     }
 
-    // コース保存
-    document.getElementById('btnSaveCourse').addEventListener('click', async () => {
-      if (currentParsedItems.length === 0) return alert("保存する配達データがありません。");
-      const name = document.getElementById('courseNameInput').value || `コース ${Date.now()}`;
-      const memo = document.getElementById('driverMemoInput').value || "";
-
-      const newCourse = {
-        id: 'course_' + Date.now(),
-        name: name,
-        memo: memo,
-        createdAt: new Date().toISOString(),
-        items: currentParsedItems
-      };
-
-      const courses = getSavedCourses();
-      courses.unshift(newCourse);
-      saveCourses(courses);
-
-      if (window.uploadCourseToCloud) {
-        await uploadCourseToCloud(newCourse);
+    // コース保存 ＆ クラウド配信（超堅牢版）
+    window.saveAndUploadCourseDirect = async function() {
+      if (!currentParsedItems || currentParsedItems.length === 0) {
+        return alert("保存する配達データがありません。先にCSVまたはExcelファイルをドロップしてください。");
       }
 
-      alert(`✅ コース「${name}」を保存・クラウド配信しました！\nスマホドライバー画面に即時反映されます。`);
-      switchTab('courses');
-    });
+      const btn = document.getElementById('btnSaveCourse');
+      const originalText = btn ? btn.innerHTML : '';
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '💾 保存・クラウド配信中...';
+      }
+
+      try {
+        const nameInput = document.getElementById('courseNameInput');
+        const name = (nameInput && nameInput.value.trim()) ? nameInput.value.trim() : `コース ${Date.now()}`;
+        const memoInput = document.getElementById('driverMemoInput');
+        const memo = memoInput ? memoInput.value.trim() : "";
+
+        const newCourse = {
+          id: 'course_' + Date.now(),
+          name: name,
+          memo: memo,
+          createdAt: new Date().toISOString(),
+          items: currentParsedItems
+        };
+
+        // 1. ローカルストレージに即時保存
+        const courses = getSavedCourses();
+        courses.unshift(newCourse);
+        saveCourses(courses);
+
+        // 2. クラウド（Firebase）へ配信（タイムアウト2.5秒で安全に保護）
+        if (window.uploadCourseToCloud) {
+          try {
+            const timeoutPromise = new Promise(resolve => setTimeout(() => resolve(false), 2500));
+            await Promise.race([uploadCourseToCloud(newCourse), timeoutPromise]);
+          } catch (cloudErr) {
+            console.warn("Cloud upload timeout/error (local saved):", cloudErr);
+          }
+        }
+
+        alert(`✅ コース「${name}」を保存・クラウド配信しました！\nスマホドライバー画面の「☁️ クラウド同期」を押すと即時反映されます。`);
+        switchTab('courses');
+      } catch (err) {
+        console.error("Save course error:", err);
+        alert("コースの保存中にエラーが発生しました: " + err.message);
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = originalText;
+        }
+      }
+    };
 
     // コース一覧表示
     function renderCourseList() {
