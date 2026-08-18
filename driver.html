@@ -510,7 +510,7 @@
       </div>
 
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
-        <b style="font-size:16px; font-weight:800; color:#0f172a;">本日のお届けコース</b>
+        <b style="font-size:16px; font-weight:800; color:#0f172a;">代配コース</b>
         <div style="display:flex; gap:6px;">
           <button class="btn btn-primary" style="padding:4px 9px; font-size:11px;" onclick="syncWithCloudDirect()">☁️ クラウド同期</button>
           <button class="btn btn-white" style="padding:4px 8px; font-size:11px;" onclick="openMapSelectorModal()">🗺️ 地図切替</button>
@@ -709,10 +709,10 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"></script>
   <script src="firebase-sync.js"></script>
   <script>
-    // --- Service Worker 強制更新 (v18) ---
+    // --- Service Worker 強制更新 (v19) ---
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=18').then((reg) => {
+        navigator.serviceWorker.register('sw.js?v=19').then((reg) => {
           reg.update();
         }).catch(err => console.log('SW registration failed:', err));
       });
@@ -813,9 +813,9 @@
       if (!courses || courses.length === 0) {
         container.innerHTML = `
           <div style="text-align:center; color:#64748b; margin-top:40px; padding:24px; background:#ffffff; border-radius:18px; border:1px solid #e2e8f0; box-shadow:0 4px 14px rgba(0,0,0,0.03);">
-            📦 本日の配達コースはまだありません。<br>
-            <span style="font-size:12px; color:#94a3b8; display:block; margin:8px 0 14px;">PC管理画面でCSVを保存するか、下記ボタンでサンプルを読み込んでください。</span>
-            <button class="btn btn-primary" style="font-size:13px; padding:8px 16px;" onclick="loadSampleToDriver()">＋ サンプル便を読み込む</button>
+            📦 代配コースはまだありません。<br>
+            <span style="font-size:12px; color:#94a3b8; display:block; margin:8px 0 14px;">PC管理画面でCSVを保存するか、「☁️ クラウド同期」を押してください。</span>
+            <button class="btn btn-primary" style="font-size:13px; padding:8px 16px;" onclick="syncWithCloudDirect()">☁️ クラウドから取得</button>
           </div>
         `;
         return;

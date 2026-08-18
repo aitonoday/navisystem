@@ -1153,15 +1153,20 @@
       alert(`✅ スマホから記録された走行ログ（全 ${points.length} 地点）を赤線で地図上に描画しました！`);
     };
 
-    window.deleteCourse = function(courseId, event) {
-      event.stopPropagation();
-      if (!confirm("このコースを削除しますか？")) return;
+    window.deleteCourse = async function(courseId, event) {
+      if (event) event.stopPropagation();
+      if (!confirm("このコースを削除しますか？\n（クラウドからも削除され、スマホ側にも反映されます）")) return;
       let courses = getSavedCourses();
       courses = courses.filter(c => c.id !== courseId);
       saveCourses(courses);
       clearMap();
       clearDrawnRoute();
       clearManualRoute();
+
+      if (window.deleteCourseFromCloud) {
+        await deleteCourseFromCloud(courseId);
+      }
+      showToast("🗑️ コースを削除しました。スマホ側にも反映されます。");
     };
 
     function clearMap() {
@@ -1426,6 +1431,15 @@
           renderCourseList();
         }
       });
+
+      if (window.fetchCoursesFromCloudDirect) {
+        fetchCoursesFromCloudDirect().then(cloudCourses => {
+          if (cloudCourses && cloudCourses.length > 0) {
+            saveCourses(cloudCourses);
+            renderCourseList();
+          }
+        });
+      }
     }
 
     renderCourseList();

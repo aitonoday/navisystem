@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lively-navi-v18-direct-rest-cloud-sync';
+const CACHE_NAME = 'lively-navi-v19-daihai-sync-match';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();

@@ -239,7 +239,7 @@ async function fetchCoursesFromCloudDirect() {
     if (res.ok) {
       const data = await res.json();
       if (data && typeof data === 'object') {
-        const list = Object.values(data).filter(c => c && c.items);
+        let list = Object.values(data).filter(c => c && c.items && c.items.length > 0);
         if (list.length > 0) {
           // 更新日時順（新しい順）にソート
           list.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
@@ -259,12 +259,31 @@ async function fetchCoursesFromCloudDirect() {
       const snapshot = await firebaseDb.ref('courses').once('value');
       const data = snapshot.val();
       if (data && typeof data === 'object') {
-        return Object.values(data).filter(c => c && c.items);
+        return Object.values(data).filter(c => c && c.items && c.items.length > 0);
       }
     }
   } catch (e) {}
 
   return [];
+}
+
+// クラウドからコースを削除する関数
+async function deleteCourseFromCloud(courseId) {
+  try {
+    // 1. ダイレクト REST API (DELETE)
+    await fetch(`${CLOUD_RTDB_BASE}/courses/${courseId}.json`, { method: 'DELETE' });
+    console.log("✅ Deleted course from cloud via REST:", courseId);
+  } catch (e) {}
+
+  try {
+    // 2. Firebase SDK fallback
+    if (!firebaseDb) initFirebaseApp(getSavedFirebaseConfig());
+    if (firebaseDb) {
+      await firebaseDb.ref(`courses/${courseId}`).remove();
+    }
+  } catch (e2) {}
+
+  return true;
 }
 
 async function updateItemStatusToCloud(courseId, itemId, isDone) {
