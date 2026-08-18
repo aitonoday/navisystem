@@ -2,8 +2,11 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>LIVELY NAVI - 配達ドライバー</title>
+  <title>LIVELY NAVI - 代配コース</title>
   
   <!-- PWA設定 -->
   <link rel="manifest" href="manifest.json">
@@ -510,11 +513,11 @@
       </div>
 
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
-        <b style="font-size:16px; font-weight:800; color:#0f172a;">代配コース</b>
+        <b style="font-size:17px; font-weight:900; color:#0f172a; display:flex; align-items:center; gap:6px;">🚚 代配コース</b>
         <div style="display:flex; gap:6px;">
-          <button class="btn btn-primary" style="padding:4px 9px; font-size:11px;" onclick="syncWithCloudDirect()">☁️ クラウド同期</button>
-          <button class="btn btn-white" style="padding:4px 8px; font-size:11px;" onclick="openMapSelectorModal()">🗺️ 地図切替</button>
-          <button class="btn btn-white" style="padding:4px 8px; font-size:11px; color:#0d9488;" onclick="forceClearCacheAndReload()">⚡ 最新化</button>
+          <button class="btn btn-primary" style="padding:5px 10px; font-size:11px; font-weight:800;" onclick="syncWithCloudDirect()">☁️ クラウド同期</button>
+          <button class="btn btn-white" style="padding:5px 8px; font-size:11px;" onclick="openMapSelectorModal()">🗺️ 地図切替</button>
+          <button class="btn btn-white" style="padding:5px 8px; font-size:11px; color:#0d9488; font-weight:700;" onclick="forceClearCacheAndReload()">⚡ 最新化</button>
         </div>
       </div>
 
@@ -709,10 +712,10 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"></script>
   <script src="firebase-sync.js"></script>
   <script>
-    // --- Service Worker 強制更新 (v19) ---
+    // --- Service Worker 強制更新 (v20) ---
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=19').then((reg) => {
+        navigator.serviceWorker.register('sw.js?v=20').then((reg) => {
           reg.update();
         }).catch(err => console.log('SW registration failed:', err));
       });
