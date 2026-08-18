@@ -737,55 +737,57 @@
     });
 
     function handleCSVFile(file) {
-      const isXlsx = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const buffer = e.target.result;
+        const uint8 = new Uint8Array(buffer);
 
-      if (isXlsx && window.XLSX) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          try {
-            const data = new Uint8Array(e.target.result);
-            const workbook = XLSX.read(data, { type: 'array' });
-            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-            const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
-            processRowsData(rows);
-          } catch (err) {
-            console.error("XLSX parse error:", err);
-            alert("Excelファイルの読み込みに失敗しました。");
-          }
-        };
-        reader.readAsArrayBuffer(file);
-      } else {
-        // テキスト / CSV（UTF-8 または Shift-JIS）
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          let text = e.target.result;
-          // PKヘッダー（実際はxlsxファイルの場合）の検知
-          if (text.startsWith('PK\x03\x04') && window.XLSX) {
-            const arrayReader = new FileReader();
-            arrayReader.onload = (e2) => {
-              const data = new Uint8Array(e2.target.result);
-              const workbook = XLSX.read(data, { type: 'array' });
-              const rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1 });
+        // 1. Excel (XLSX / ZIP) バイナリ検知 (先頭が 0x50, 0x4B, 0x03, 0x04)
+        if (uint8.length > 4 && uint8[0] === 0x50 && uint8[1] === 0x4B && uint8[2] === 0x03 && uint8[3] === 0x04) {
+          if (window.XLSX) {
+            try {
+              const workbook = XLSX.read(uint8, { type: 'array' });
+              const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+              const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
               processRowsData(rows);
-            };
-            arrayReader.readAsArrayBuffer(file);
-            return;
+              return;
+            } catch (err) {
+              console.error("XLSX parse error:", err);
+            }
           }
+        }
 
+        // 2. CSV / テキスト（UTF-8 または Shift_JIS 自動高精度デコード）
+        let text = "";
+        try {
+          // 厳格なUTF-8デコード試行（不正バイトがあれば例外へ）
+          const utf8Decoder = new TextDecoder('utf-8', { fatal: true });
+          text = utf8Decoder.decode(buffer);
+        } catch (err) {
+          // UTF-8で例外が出た場合はShift-JIS (Windows-31J / CP932)
           try {
-            const rows = parseCSV(text);
-            processRowsData(rows);
-          } catch (err) {
-            const sjisReader = new FileReader();
-            sjisReader.onload = (e2) => {
-              const rows = parseCSV(e2.target.result);
-              processRowsData(rows);
-            };
-            sjisReader.readAsText(file, 'Shift_JIS');
+            const sjisDecoder = new TextDecoder('shift-jis');
+            text = sjisDecoder.decode(buffer);
+          } catch (err2) {
+            text = new TextDecoder('utf-8').decode(buffer);
           }
-        };
-        reader.readAsText(file, 'UTF-8');
-      }
+        }
+
+        // 万一置換文字 (\uFFFD) が含まれる場合はShift-JISで再検証
+        if (text.includes('\uFFFD')) {
+          try {
+            const sjisDecoder = new TextDecoder('shift-jis');
+            const sjisText = sjisDecoder.decode(buffer);
+            if (!sjisText.includes('\uFFFD')) {
+              text = sjisText;
+            }
+          } catch (e) {}
+        }
+
+        const rows = parseCSV(text);
+        processRowsData(rows);
+      };
+      reader.readAsArrayBuffer(file);
     }
 
     async function processRowsData(rows) {
