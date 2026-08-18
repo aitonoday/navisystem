@@ -512,8 +512,8 @@
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
         <b style="font-size:16px; font-weight:800; color:#0f172a;">本日のお届けコース</b>
         <div style="display:flex; gap:6px;">
+          <button class="btn btn-primary" style="padding:4px 9px; font-size:11px;" onclick="syncWithCloudDirect()">☁️ クラウド同期</button>
           <button class="btn btn-white" style="padding:4px 8px; font-size:11px;" onclick="openMapSelectorModal()">🗺️ 地図切替</button>
-          <button class="btn btn-white" style="padding:4px 8px; font-size:11px;" onclick="refreshCourses()">🔄 更新</button>
           <button class="btn btn-white" style="padding:4px 8px; font-size:11px; color:#0d9488;" onclick="forceClearCacheAndReload()">⚡ 最新化</button>
         </div>
       </div>
@@ -707,10 +707,10 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <script src="firebase-sync.js"></script>
   <script>
-    // --- Service Worker 強制更新 (v15) ---
+    // --- Service Worker 強制更新 (v16) ---
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=15').then((reg) => {
+        navigator.serviceWorker.register('sw.js?v=16').then((reg) => {
           reg.update();
         }).catch(err => console.log('SW registration failed:', err));
       });
@@ -785,6 +785,21 @@
     window.loadSampleToDriver = function() {
       saveCourses(SAMPLE_COURSES);
       refreshCourses();
+    };
+
+    // ☁️ クラウドから最新コースを強制取得して同期
+    window.syncWithCloudDirect = async function() {
+      if (window.fetchCoursesFromCloudDirect) {
+        const cloudCourses = await fetchCoursesFromCloudDirect();
+        if (cloudCourses && cloudCourses.length > 0) {
+          saveCourses(cloudCourses);
+          refreshCourses();
+          alert(`✅ クラウドから最新 ${cloudCourses.length} 件のコースを受信・同期しました！`);
+          return;
+        }
+      }
+      refreshCourses();
+      alert("📡 クラウドと通信しました。コース一覧を最新化しました。");
     };
 
     function refreshCourses() {
@@ -1561,6 +1576,18 @@
 
       if (window.subscribeCoursesFromCloud) {
         subscribeCoursesFromCloud((cloudCourses) => {
+          if (cloudCourses && cloudCourses.length > 0) {
+            saveCourses(cloudCourses);
+            if (!currentCourse) {
+              refreshCourses();
+            }
+          }
+        });
+      }
+
+      // 初回起動時の直接同期
+      if (window.fetchCoursesFromCloudDirect) {
+        fetchCoursesFromCloudDirect().then((cloudCourses) => {
           if (cloudCourses && cloudCourses.length > 0) {
             saveCourses(cloudCourses);
             if (!currentCourse) {

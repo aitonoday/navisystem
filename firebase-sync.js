@@ -213,6 +213,33 @@ function subscribeCoursesFromCloud(onCoursesUpdated) {
   }
 }
 
+// クラウドから直接コースを1回即時取得する関数
+async function fetchCoursesFromCloudDirect() {
+  if (!firebaseDb) initFirebaseApp(getSavedFirebaseConfig());
+  if (!firebaseDb) return [];
+
+  try {
+    const snapshot = await firebaseDb.ref('courses').once('value');
+    const data = snapshot.val();
+    if (data && typeof data === 'object') {
+      return Object.values(data);
+    }
+  } catch (e) {
+    try {
+      const fallbackDb = firebase.app().database("https://lively-navi-default-rtdb.firebaseio.com");
+      const snap = await fallbackDb.ref('courses').once('value');
+      const data = snap.val();
+      if (data && typeof data === 'object') {
+        firebaseDb = fallbackDb;
+        return Object.values(data);
+      }
+    } catch (e2) {
+      console.warn("Direct fetch courses error:", e2);
+    }
+  }
+  return [];
+}
+
 async function updateItemStatusToCloud(courseId, itemId, isDone) {
   if (!firebaseDb) return false;
   try {
