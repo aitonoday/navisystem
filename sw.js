@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lively-navi-v20-daihai-force-refresh';
+const CACHE_NAME = 'lively-navi-v21-fix-hook-error';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();

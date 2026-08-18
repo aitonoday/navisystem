@@ -712,10 +712,10 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"></script>
   <script src="firebase-sync.js"></script>
   <script>
-    // --- Service Worker 強制更新 (v20) ---
+    // --- Service Worker 強制更新 (v21) ---
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=20').then((reg) => {
+        navigator.serviceWorker.register('sw.js?v=21').then((reg) => {
           reg.update();
         }).catch(err => console.log('SW registration failed:', err));
       });
@@ -1284,9 +1284,6 @@
           const { lat, lng } = e.latlng;
           await applyLocationCorrection(lat, lng);
         });
-
-        // 👆 フリック・ドラッグ操作の回転座標補正フック
-        hookMapTouchRotation();
       }
 
       handleScreenResize();
