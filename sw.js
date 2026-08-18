@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lively-navi-v23-persistent-zoom';
+const CACHE_NAME = 'lively-navi-v24-clean-home-buttons';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();

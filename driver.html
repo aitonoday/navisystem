@@ -515,9 +515,8 @@
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
         <b style="font-size:17px; font-weight:900; color:#0f172a; display:flex; align-items:center; gap:6px;">🚚 代配コース</b>
         <div style="display:flex; gap:6px;">
-          <button class="btn btn-primary" style="padding:5px 10px; font-size:11px; font-weight:800;" onclick="syncWithCloudDirect()">☁️ クラウド同期</button>
-          <button class="btn btn-white" style="padding:5px 8px; font-size:11px;" onclick="openMapSelectorModal()">🗺️ 地図切替</button>
-          <button class="btn btn-white" style="padding:5px 8px; font-size:11px; color:#0d9488; font-weight:700;" onclick="forceClearCacheAndReload()">⚡ 最新化</button>
+          <button class="btn btn-primary" style="padding:6px 12px; font-size:12px; font-weight:800;" onclick="syncWithCloudDirect()">☁️ クラウド同期</button>
+          <button class="btn btn-white" style="padding:6px 10px; font-size:12px; color:#0d9488; font-weight:700;" onclick="forceClearCacheAndReload()">⚡ 最新化</button>
         </div>
       </div>
 
@@ -715,10 +714,10 @@
     // キャッシュ互換性用（古いキャッシュが残っている端末でのエラーを100%防止）
     window.hookMapTouchRotation = function() {};
 
-    // --- Service Worker 強制更新 (v23) ---
+    // --- Service Worker 強制更新 (v24) ---
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=23').then((reg) => {
+        navigator.serviceWorker.register('sw.js?v=24').then((reg) => {
           reg.update();
         }).catch(err => console.log('SW registration failed:', err));
       });
