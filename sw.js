@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lively-navi-v13-goal-marker';
+const CACHE_NAME = 'lively-navi-v14-weekly-format-standard';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();

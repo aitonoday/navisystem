@@ -707,10 +707,10 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <script src="firebase-sync.js"></script>
   <script>
-    // --- Service Worker 強制更新 (v13) ---
+    // --- Service Worker 強制更新 (v14) ---
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=13').then((reg) => {
+        navigator.serviceWorker.register('sw.js?v=14').then((reg) => {
           reg.update();
         }).catch(err => console.log('SW registration failed:', err));
       });
@@ -749,18 +749,18 @@
     let currentLegLogs = [];
     let gpsPolyline = null;
 
-    // --- コースデータ取得 ---
+    // --- コースデータ取得（週次配達表フォーマット基準） ---
     const SAMPLE_COURSES = [
       {
-        id: 'sample_today',
-        name: '本日 奈良エリア午前配達便 (サンプル)',
-        memo: '担当: ドライバーA / ルート001',
+        id: 'course_505001_20260817',
+        name: '【20260817週】コース 505001 (宅配御膳 田原本)',
+        memo: '週次配達表 拠点50 / コース001',
         createdAt: new Date().toISOString(),
         items: [
-          { id: 1, order: 1, name: "田中 太郎", address: "奈良県奈良市登大路町30", time: "午前中", memo: "置き配可（玄関前）", lat: 34.685062, lng: 135.832809, isDone: false },
-          { id: 2, order: 2, name: "高橋 四郎", address: "奈良県奈良市三条栄町", time: "指定なし", memo: "道幅狭小注意", lat: 34.680706, lng: 135.808823, isDone: false },
-          { id: 3, order: 3, name: "佐藤 次郎", address: "奈良県生駒市北新町10-38", time: "14:00-16:00", memo: "オートロック暗証1234", lat: 34.694481, lng: 135.697067, isDone: false },
-          { id: 4, order: 4, name: "鈴木 三郎", address: "奈良県大和高田市大中100", time: "18:00-20:00", memo: "不在時宅配BOX", lat: 34.515060, lng: 135.737167, isDone: false }
+          { id: 1, order: 1, name: "山本 様", address: "奈良県橿原市忌部町246", time: "指定なし", memo: "ピ 玄中 留守玄前", lat: 34.503200, lng: 135.772500, isDone: false },
+          { id: 2, order: 2, name: "森本 様", address: "奈良県橿原市四条町673", time: "指定なし", memo: "ポスト下 雨天時ピ玄中", lat: 34.506500, lng: 135.782000, isDone: false },
+          { id: 3, order: 3, name: "田中 様", address: "奈良県奈良市登大路町30", time: "午前中", memo: "置き配可（玄関前）", lat: 34.685062, lng: 135.832809, isDone: false },
+          { id: 4, order: 4, name: "佐藤 様", address: "奈良県生駒市北新町10-38", time: "14:00-16:00", memo: "オートロック暗証1234", lat: 34.694481, lng: 135.697067, isDone: false }
         ]
       }
     ];

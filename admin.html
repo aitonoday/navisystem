@@ -486,6 +486,8 @@
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+  <!-- Excel (.xlsx) / CSV 自動解析ライブラリ -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script>
     // 1. CARTO Voyager (スマートナビ地図：視認性抜群)
     const cartoVoyager = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
@@ -735,18 +737,182 @@
     });
 
     function handleCSVFile(file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        let text = e.target.result;
-        try {
-          processCSVText(text);
-        } catch (err) {
-          const sjisReader = new FileReader();
-          sjisReader.onload = (e2) => processCSVText(e2.target.result);
-          sjisReader.readAsText(file, 'Shift_JIS');
+      const isXlsx = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
+
+      if (isXlsx && window.XLSX) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+            const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+            processRowsData(rows);
+          } catch (err) {
+            console.error("XLSX parse error:", err);
+            alert("Excelファイルの読み込みに失敗しました。");
+          }
+        };
+        reader.readAsArrayBuffer(file);
+      } else {
+        // テキスト / CSV（UTF-8 または Shift-JIS）
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          let text = e.target.result;
+          // PKヘッダー（実際はxlsxファイルの場合）の検知
+          if (text.startsWith('PK\x03\x04') && window.XLSX) {
+            const arrayReader = new FileReader();
+            arrayReader.onload = (e2) => {
+              const data = new Uint8Array(e2.target.result);
+              const workbook = XLSX.read(data, { type: 'array' });
+              const rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1 });
+              processRowsData(rows);
+            };
+            arrayReader.readAsArrayBuffer(file);
+            return;
+          }
+
+          try {
+            const rows = parseCSV(text);
+            processRowsData(rows);
+          } catch (err) {
+            const sjisReader = new FileReader();
+            sjisReader.onload = (e2) => {
+              const rows = parseCSV(e2.target.result);
+              processRowsData(rows);
+            };
+            sjisReader.readAsText(file, 'Shift_JIS');
+          }
+        };
+        reader.readAsText(file, 'UTF-8');
+      }
+    }
+
+    async function processRowsData(rows) {
+      if (!rows || rows.length < 2) return alert("有効な配達表データではありません。");
+
+      // ヘッダー行のトリムと列インデックスの特定
+      const header = rows[0].map(h => (h !== undefined && h !== null ? String(h).trim() : ''));
+
+      // 📋 【週次配達表 フォーマット基準】
+      const menuWeekIdx = header.findIndex(h => h.includes('メニュー週') || h.includes('週'));
+      const courseNameIdx = header.findIndex(h => h.includes('コース名') || h.includes('コースコード') || h.includes('コース'));
+      const baseNameIdx = header.findIndex(h => h.includes('拠点名') || h.includes('拠点'));
+      const nameIdx = header.findIndex(h => h.includes('顧客名') || h.includes('顧客') || h.includes('お名前') || h.includes('氏名'));
+      const addrIdx = header.findIndex(h => h.includes('住所') || h.includes('番地') || h.includes('先'));
+      const buildingIdx = header.findIndex(h => h.includes('ビルアパート名') || h.includes('建物') || h.includes('アパート'));
+      const orderIdx = header.findIndex(h => h.includes('配達順') || h.includes('順') || h.includes('No'));
+      const memoIdx = header.findIndex(h => h.includes('配達表備考') || h.includes('備考') || h.includes('メモ') || h.includes('注意'));
+      const placeIdx = header.findIndex(h => h.includes('置き場所') || h.includes('置場'));
+      const timeIdx = header.findIndex(h => h.includes('時間') || h.includes('指定'));
+
+      const actualNameIdx = nameIdx !== -1 ? nameIdx : 0;
+      const actualAddrIdx = addrIdx !== -1 ? addrIdx : 1;
+
+      // 🏷️ コースタイトルの自動生成: 「メニュー週」と「コース名」で構成
+      let generatedTitle = "";
+      const firstRow = rows[1] || [];
+      const menuWeekVal = menuWeekIdx !== -1 ? String(firstRow[menuWeekIdx] || '').trim() : '';
+      const courseNameVal = courseNameIdx !== -1 ? String(firstRow[courseNameIdx] || '').trim() : '';
+      const baseNameVal = baseNameIdx !== -1 ? String(firstRow[baseNameIdx] || '').trim() : '';
+
+      if (menuWeekVal || courseNameVal) {
+        const weekStr = menuWeekVal ? `【${menuWeekVal}週】` : '';
+        const courseStr = courseNameVal ? `コース ${courseNameVal}` : '';
+        const baseStr = baseNameVal ? ` (${baseNameVal})` : '';
+        generatedTitle = `${weekStr}${courseStr}${baseStr}`.trim();
+      } else {
+        generatedTitle = `${new Date().toLocaleDateString()} 配達便 (${rows.length - 1}件)`;
+      }
+
+      clearMap();
+      clearDrawnRoute();
+      clearManualRoute();
+      currentParsedItems = [];
+      document.getElementById('importSettings').style.display = 'block';
+      document.getElementById('courseNameInput').value = generatedTitle;
+
+      const previewEl = document.getElementById('previewList');
+      previewEl.innerHTML = '<div style="color:#64748b; text-align:center;">住所を解析中...</div>';
+
+      let successCount = 0;
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        if (!row || row.length <= actualAddrIdx) continue;
+
+        let rawAddress = String(row[actualAddrIdx] || '').trim();
+        if (!rawAddress) continue;
+
+        // ビル・アパート名があれば結合
+        if (buildingIdx !== -1 && row[buildingIdx]) {
+          const bld = String(row[buildingIdx]).trim();
+          if (bld && !rawAddress.includes(bld)) {
+            rawAddress += ` ${bld}`;
+          }
         }
-      };
-      reader.readAsText(file, 'UTF-8');
+
+        const name = (nameIdx !== -1 && row[nameIdx]) ? String(row[nameIdx]).trim() : `配達先 ${i}`;
+        const rawOrder = orderIdx !== -1 && row[orderIdx] ? parseInt(row[orderIdx], 10) : i;
+        const orderVal = isNaN(rawOrder) ? i : rawOrder;
+
+        // メモ・配達表備考 ＋ 置き場所
+        let memoText = "";
+        if (memoIdx !== -1 && row[memoIdx]) {
+          memoText = String(row[memoIdx]).trim();
+        }
+        if (placeIdx !== -1 && row[placeIdx]) {
+          const place = String(row[placeIdx]).trim();
+          if (place && !memoText.includes(place)) {
+            memoText = memoText ? `${memoText} / 置場:${place}` : `置場:${place}`;
+          }
+        }
+
+        const time = timeIdx !== -1 && row[timeIdx] ? String(row[timeIdx]).trim() : "";
+
+        let coords = null;
+        let isFromMaster = false;
+
+        // 1. 地点補正マスターを優先検索
+        if (window.findCorrectedCoords) {
+          const master = findCorrectedCoords(rawAddress, name);
+          if (master) {
+            coords = { lat: master.lat, lng: master.lng };
+            isFromMaster = true;
+          }
+        }
+
+        // 2. マスターに無ければジオコーディング
+        if (!coords) {
+          coords = await geocodeAddress(rawAddress);
+        }
+
+        const item = {
+          id: i,
+          order: orderVal,
+          name: name,
+          address: rawAddress,
+          time: time,
+          memo: memoText,
+          lat: coords ? coords.lat : 34.5 + (Math.random() - 0.5) * 0.05,
+          lng: coords ? coords.lng : 135.75 + (Math.random() - 0.5) * 0.05,
+          isDone: false,
+          hasValidCoords: !!coords,
+          isCorrectedMaster: isFromMaster
+        };
+
+        currentParsedItems.push(item);
+        if (coords) successCount++;
+      }
+
+      currentParsedItems.sort((a, b) => a.order - b.order);
+
+      document.getElementById('geocodeSuccessCount').innerText = successCount;
+      document.getElementById('geocodeTotalCount').innerText = currentParsedItems.length;
+
+      activeLoadedItems = currentParsedItems;
+      renderPreviewList();
+      plotItemsOnMap(currentParsedItems);
+      updateRouteDropdowns();
     }
 
     async function geocodeAddress(address) {
@@ -771,88 +937,6 @@
       } catch (e) {}
 
       return null;
-    }
-
-    async function processCSVText(text) {
-      const rows = parseCSV(text);
-      if (rows.length < 2) return alert("有効なCSVデータではありません。");
-
-      const header = rows[0].map(h => (h || '').trim());
-      let nameIndex = header.findIndex(h => h.includes('名') || h.includes('顧客') || h.includes('宛先'));
-      let addrIndex = header.findIndex(h => h.includes('住所') || h.includes('番地') || h.includes('先'));
-      let orderIndex = header.findIndex(h => h.includes('順') || h.includes('No') || h.includes('番号'));
-      let timeIndex = header.findIndex(h => h.includes('時間') || h.includes('指定'));
-      let memoIndex = header.findIndex(h => h.includes('メモ') || h.includes('備考') || h.includes('注意'));
-
-      if (nameIndex === -1) nameIndex = orderIndex === 0 ? 1 : 0;
-      if (addrIndex === -1) addrIndex = nameIndex === 1 ? 2 : 1;
-
-      clearMap();
-      clearDrawnRoute();
-      clearManualRoute();
-      currentParsedItems = [];
-      document.getElementById('importSettings').style.display = 'block';
-      document.getElementById('courseNameInput').value = `${new Date().toLocaleDateString()} 配達便 (${rows.length - 1}件)`;
-
-      const previewEl = document.getElementById('previewList');
-      previewEl.innerHTML = '<div style="color:#64748b; text-align:center;">住所を解析中...</div>';
-
-      let successCount = 0;
-      for (let i = 1; i < rows.length; i++) {
-        const row = rows[i];
-        if (!row || row.length <= addrIndex) continue;
-
-        const orderVal = orderIndex !== -1 && row[orderIndex] ? parseInt(row[orderIndex]) : i;
-        const name = row[nameIndex] || `配達先 ${i}`;
-        const address = row[addrIndex] || "";
-        const time = timeIndex !== -1 ? row[timeIndex] : "";
-        const memo = memoIndex !== -1 ? row[memoIndex] : "";
-        if (!address) continue;
-
-        let coords = null;
-        let isFromMaster = false;
-
-        // 1. 地点補正マスターを優先検索
-        if (window.findCorrectedCoords) {
-          const master = findCorrectedCoords(address, name);
-          if (master) {
-            coords = { lat: master.lat, lng: master.lng };
-            isFromMaster = true;
-          }
-        }
-
-        // 2. マスターに無ければジオコーディング
-        if (!coords) {
-          coords = await geocodeAddress(address);
-        }
-
-        const item = {
-          id: i,
-          order: isNaN(orderVal) ? i : orderVal,
-          name: name,
-          address: address,
-          time: time,
-          memo: memo,
-          lat: coords ? coords.lat : 34.685 + (Math.random() - 0.5) * 0.05,
-          lng: coords ? coords.lng : 135.805 + (Math.random() - 0.5) * 0.05,
-          isDone: false,
-          hasValidCoords: !!coords,
-          isCorrectedMaster: isFromMaster
-        };
-
-        currentParsedItems.push(item);
-        if (coords) successCount++;
-      }
-
-      currentParsedItems.sort((a, b) => a.order - b.order);
-
-      document.getElementById('geocodeSuccessCount').innerText = successCount;
-      document.getElementById('geocodeTotalCount').innerText = currentParsedItems.length;
-
-      activeLoadedItems = currentParsedItems;
-      renderPreviewList();
-      plotItemsOnMap(currentParsedItems);
-      updateRouteDropdowns();
     }
 
     function parseCSV(text) {
