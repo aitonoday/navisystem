@@ -712,10 +712,13 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"></script>
   <script src="firebase-sync.js"></script>
   <script>
-    // --- Service Worker 強制更新 (v21) ---
+    // キャッシュ互換性用（古いキャッシュが残っている端末でのエラーを100%防止）
+    window.hookMapTouchRotation = function() {};
+
+    // --- Service Worker 強制更新 (v22) ---
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=21').then((reg) => {
+        navigator.serviceWorker.register('sw.js?v=22').then((reg) => {
           reg.update();
         }).catch(err => console.log('SW registration failed:', err));
       });
@@ -731,7 +734,7 @@
         const registrations = await navigator.serviceWorker.getRegistrations();
         for (let r of registrations) { await r.unregister(); }
       }
-      window.location.reload(true);
+      window.location.href = window.location.pathname + '?v=' + Date.now();
     };
 
     const STORAGE_KEY = 'navisystem_courses';

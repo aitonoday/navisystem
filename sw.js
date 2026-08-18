@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lively-navi-v21-fix-hook-error';
+const CACHE_NAME = 'lively-navi-v22-kill-cache-errors';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
