@@ -329,6 +329,9 @@
       <span style="font-size: 12px; font-weight: 700; color: #64748b;">PC 管理コンソール</span>
     </div>
     <div class="nav-links">
+      <button class="btn btn-white" style="color:#0d9488; font-weight:800;" onclick="window.location.reload(true)">
+        ⚡ 最新化
+      </button>
       <button class="btn btn-purple" onclick="openCloudConfigModal()">
         ☁️ クラウド連携設定
       </button>
@@ -989,10 +992,37 @@
       });
     }
 
+    // 画面内トースト通知
+    function showToast(msg, type = 'success') {
+      let toast = document.getElementById('appToast');
+      if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'appToast';
+        toast.style.cssText = `
+          position: fixed; top: 24px; left: 50%; transform: translateX(-50%);
+          background: #0f172a; color: #ffffff; padding: 14px 28px;
+          border-radius: 50px; font-size: 14px; font-weight: 800;
+          box-shadow: 0 10px 30px rgba(0,0,0,0.3); z-index: 99999;
+          display: flex; align-items: center; gap: 10px;
+          transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        `;
+        document.body.appendChild(toast);
+      }
+      toast.style.background = type === 'success' ? '#0d9488' : '#ef4444';
+      toast.innerHTML = msg;
+      toast.style.opacity = '1';
+      toast.style.transform = 'translateX(-50%) translateY(0)';
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(-50%) translateY(-20px)';
+      }, 4000);
+    }
+
     // コース保存 ＆ クラウド配信（超堅牢版）
     window.saveAndUploadCourseDirect = async function() {
       if (!currentParsedItems || currentParsedItems.length === 0) {
-        return alert("保存する配達データがありません。先にCSVまたはExcelファイルをドロップしてください。");
+        showToast("⚠️ 保存する配達データがありません。CSVをドロップしてください。", "error");
+        return;
       }
 
       const btn = document.getElementById('btnSaveCourse');
@@ -1021,21 +1051,22 @@
         courses.unshift(newCourse);
         saveCourses(courses);
 
-        // 2. クラウド（Firebase）へ配信（タイムアウト2.5秒で安全に保護）
+        // 2. クラウド（Firebase）へ配信（タイムアウト2秒で安全に保護）
         if (window.uploadCourseToCloud) {
           try {
-            const timeoutPromise = new Promise(resolve => setTimeout(() => resolve(false), 2500));
+            const timeoutPromise = new Promise(resolve => setTimeout(() => resolve(false), 2000));
             await Promise.race([uploadCourseToCloud(newCourse), timeoutPromise]);
           } catch (cloudErr) {
             console.warn("Cloud upload timeout/error (local saved):", cloudErr);
           }
         }
 
-        alert(`✅ コース「${name}」を保存・クラウド配信しました！\nスマホドライバー画面の「☁️ クラウド同期」を押すと即時反映されます。`);
+        // 3. 画面内トースト通知 ＆ タブ自動遷移
+        showToast(`🎉 コース「${name}」を保存・クラウド配信しました！`);
         switchTab('courses');
       } catch (err) {
         console.error("Save course error:", err);
-        alert("コースの保存中にエラーが発生しました: " + err.message);
+        showToast("⚠️ 保存エラー: " + err.message, "error");
       } finally {
         if (btn) {
           btn.disabled = false;
@@ -1043,6 +1074,13 @@
         }
       }
     };
+
+    // イベントデリゲーションによる予備バインド
+    document.addEventListener('click', (e) => {
+      if (e.target && (e.target.id === 'btnSaveCourse' || e.target.closest('#btnSaveCourse'))) {
+        window.saveAndUploadCourseDirect();
+      }
+    });
 
     // コース一覧表示
     function renderCourseList() {
