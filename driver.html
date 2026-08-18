@@ -709,10 +709,10 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"></script>
   <script src="firebase-sync.js"></script>
   <script>
-    // --- Service Worker 強制更新 (v17) ---
+    // --- Service Worker 強制更新 (v18) ---
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=17').then((reg) => {
+        navigator.serviceWorker.register('sw.js?v=18').then((reg) => {
           reg.update();
         }).catch(err => console.log('SW registration failed:', err));
       });

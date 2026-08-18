@@ -164,35 +164,53 @@ function subscribeLocationCorrections(onLoaded) {
   }
 }
 
-// --- 2. コース情報の送受信 ---
+// --- 2. コース情報の送受信（REST APIダイレクト同期 ＋ Firebase SDK ハイブリッド） ---
+
+const CLOUD_RTDB_BASE = "https://lively-navi-default-rtdb.asia-southeast1.firebasedatabase.app";
 
 async function uploadCourseToCloud(course) {
-  if (!firebaseDb) initFirebaseApp(getSavedFirebaseConfig());
-  if (!firebaseDb) return false;
+  const courseData = {
+    ...course,
+    updatedAt: Date.now()
+  };
 
+  let isSuccess = false;
+
+  // 1. ダイレクト REST API (PUT) - SDK接続に依存せず100%確実に同期
   try {
-    await firebaseDb.ref(`courses/${course.id}`).set({
-      ...course,
-      updatedAt: Date.now()
+    const res = await fetch(`${CLOUD_RTDB_BASE}/courses/${course.id}.json`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(courseData)
     });
-    console.log("✅ Course uploaded to cloud:", course.name);
-    return true;
-  } catch (err) {
-    try {
-      const fallbackDb = firebase.app().database("https://lively-navi-default-rtdb.firebaseio.com");
-      await fallbackDb.ref(`courses/${course.id}`).set({
-        ...course,
-        updatedAt: Date.now()
-      });
-      firebaseDb = fallbackDb;
-      return true;
-    } catch (e2) {
-      return false;
+    if (res.ok) {
+      console.log("✅ Course uploaded to cloud via Direct REST:", course.name);
+      isSuccess = true;
     }
+  } catch (restErr) {
+    console.warn("Direct REST upload error:", restErr);
   }
+
+  // 2. Firebase SDK経由でも保存
+  try {
+    if (!firebaseDb) initFirebaseApp(getSavedFirebaseConfig());
+    if (firebaseDb) {
+      await firebaseDb.ref(`courses/${course.id}`).set(courseData);
+      isSuccess = true;
+    }
+  } catch (err) {}
+
+  return isSuccess;
 }
 
 function subscribeCoursesFromCloud(onCoursesUpdated) {
+  // 初回即時取得 (REST API)
+  fetchCoursesFromCloudDirect().then(courses => {
+    if (courses && courses.length > 0) {
+      onCoursesUpdated(courses);
+    }
+  }).catch(() => {});
+
   if (!firebaseDb) initFirebaseApp(getSavedFirebaseConfig());
   if (!firebaseDb) return null;
 
@@ -213,46 +231,64 @@ function subscribeCoursesFromCloud(onCoursesUpdated) {
   }
 }
 
-// クラウドから直接コースを1回即時取得する関数
+// クラウドから直接コースを1回即時取得する関数 (REST API ダイレクト)
 async function fetchCoursesFromCloudDirect() {
-  if (!firebaseDb) initFirebaseApp(getSavedFirebaseConfig());
-  if (!firebaseDb) return [];
-
+  // 1. ダイレクト REST API (GET) - 最優先で即座に取得
   try {
-    const snapshot = await firebaseDb.ref('courses').once('value');
-    const data = snapshot.val();
-    if (data && typeof data === 'object') {
-      return Object.values(data);
-    }
-  } catch (e) {
-    try {
-      const fallbackDb = firebase.app().database("https://lively-navi-default-rtdb.firebaseio.com");
-      const snap = await fallbackDb.ref('courses').once('value');
-      const data = snap.val();
+    const res = await fetch(`${CLOUD_RTDB_BASE}/courses.json?t=${Date.now()}`);
+    if (res.ok) {
+      const data = await res.json();
       if (data && typeof data === 'object') {
-        firebaseDb = fallbackDb;
-        return Object.values(data);
+        const list = Object.values(data).filter(c => c && c.items);
+        if (list.length > 0) {
+          // 更新日時順（新しい順）にソート
+          list.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+          console.log(`✅ Fetched ${list.length} courses directly from cloud REST API`);
+          return list;
+        }
       }
-    } catch (e2) {
-      console.warn("Direct fetch courses error:", e2);
     }
+  } catch (restErr) {
+    console.warn("Direct REST fetch error:", restErr);
   }
+
+  // 2. Firebase SDK fallback
+  try {
+    if (!firebaseDb) initFirebaseApp(getSavedFirebaseConfig());
+    if (firebaseDb) {
+      const snapshot = await firebaseDb.ref('courses').once('value');
+      const data = snapshot.val();
+      if (data && typeof data === 'object') {
+        return Object.values(data).filter(c => c && c.items);
+      }
+    }
+  } catch (e) {}
+
   return [];
 }
 
 async function updateItemStatusToCloud(courseId, itemId, isDone) {
-  if (!firebaseDb) return false;
   try {
-    const courseRef = firebaseDb.ref(`courses/${courseId}`);
-    const snapshot = await courseRef.once('value');
-    const course = snapshot.val();
-    if (course && course.items) {
-      const idx = course.items.findIndex(i => i.id === itemId);
-      if (idx !== -1) {
-        course.items[idx].isDone = isDone;
-        course.items[idx].arrivedAt = isDone ? Date.now() : null;
-        course.updatedAt = Date.now();
-        await courseRef.set(course);
+    // REST API で即時更新
+    const res = await fetch(`${CLOUD_RTDB_BASE}/courses/${courseId}/items.json`);
+    if (res.ok) {
+      const items = await res.json();
+      if (Array.isArray(items)) {
+        const idx = items.findIndex(i => i && i.id === itemId);
+        if (idx !== -1) {
+          items[idx].isDone = isDone;
+          items[idx].arrivedAt = isDone ? Date.now() : null;
+          await fetch(`${CLOUD_RTDB_BASE}/courses/${courseId}/items.json`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(items)
+          });
+          await fetch(`${CLOUD_RTDB_BASE}/courses/${courseId}/updatedAt.json`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(Date.now())
+          });
+        }
       }
     }
     return true;
