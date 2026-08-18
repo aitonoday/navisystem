@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lively-navi-v12-orientation-fix';
+const CACHE_NAME = 'lively-navi-v13-goal-marker';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
