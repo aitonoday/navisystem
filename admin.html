@@ -372,6 +372,28 @@
     </div>
   </div>
 
+  <!-- QRコード共有モーダル -->
+  <div id="qrShareModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(15,23,42,0.5); z-index:99999; align-items:center; justify-content:center; backdrop-filter:blur(6px);">
+    <div style="background:#ffffff; border-radius:24px; padding:26px; max-width:440px; width:90%; box-shadow:0 20px 50px rgba(0,0,0,0.25); text-align:center;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <b style="font-size:17px; color:#0f172a; font-weight:800;" id="qrModalTitle">📱 スマホへコース転送</b>
+        <button class="btn btn-white" style="padding:2px 8px; font-size:12px;" onclick="closeQrShareModal()">✕</button>
+      </div>
+      <p style="font-size:12px; color:#64748b; margin-bottom:14px; line-height:1.5;">
+        スマホのカメラで下記QRコードを読み取るだけで、コースデータ（全件）が直接スマホのナビ画面に転送されます！
+      </p>
+      <div id="qrcodeContainer" style="display:flex; justify-content:center; align-items:center; margin:10px auto; padding:12px; background:#fff; border:2px solid #e2e8f0; border-radius:18px; width:220px; height:220px; box-shadow:0 4px 14px rgba(0,0,0,0.06);"></div>
+      <div style="margin-top:16px; display:flex; flex-direction:column; gap:8px;">
+        <button class="btn btn-primary" style="width:100%; justify-content:center; padding:11px; font-size:13px; font-weight:800;" onclick="copyShareUrlToClipboard()">
+          📋 スマホ共有URLをコピー
+        </button>
+        <button class="btn btn-white" style="width:100%; justify-content:center; padding:9px; font-size:12px;" onclick="closeQrShareModal()">
+          閉じる
+        </button>
+      </div>
+    </div>
+  </div>
+
   <div id="container">
     <!-- ルートツールバー -->
     <div id="route-planner-bar">
@@ -491,6 +513,9 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
   <!-- Excel (.xlsx) / CSV 自動解析ライブラリ -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <!-- QRコード生成 & 高圧縮LZStringライブラリ -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"></script>
   <script>
     // 1. CARTO Voyager (スマートナビ地図：視認性抜群)
     const cartoVoyager = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
@@ -1105,6 +1130,7 @@
           <div class="course-header">
             <span class="course-title">${course.name}</span>
             <div style="display:flex; gap:4px;">
+              <button class="btn btn-primary" style="padding:3px 8px; font-size:11px; font-weight:800;" onclick="openQrShareModal('${course.id}', event)">📱 スマホ転送</button>
               <button class="btn btn-purple" style="padding:3px 8px; font-size:11px;" onclick="loadAndShowGpsTrackLog('${course.id}', event)">📍 走行ログ</button>
               <button class="btn btn-red" style="padding:3px 8px; font-size:11px;" onclick="deleteCourse('${course.id}', event)">削除</button>
             </div>
@@ -1130,6 +1156,71 @@
         listEl.appendChild(card);
       });
     }
+
+    let currentShareUrl = "";
+    window.openQrShareModal = function(courseId, event) {
+      if (event) event.stopPropagation();
+      const courses = getSavedCourses();
+      const course = courses.find(c => c.id === courseId);
+      if (!course) return;
+
+      document.getElementById('qrModalTitle').innerText = `📱 ${course.name}`;
+      const container = document.getElementById('qrcodeContainer');
+      container.innerHTML = '';
+
+      // LZStringでコースデータを高圧縮
+      let compressed = "";
+      if (window.LZString) {
+        const cleanCourse = {
+          id: course.id,
+          name: course.name,
+          memo: course.memo || '',
+          items: course.items.map(i => ({
+            id: i.id,
+            order: i.order,
+            code: i.code || '',
+            name: i.name,
+            address: i.address,
+            time: i.time || '',
+            memo: i.memo || '',
+            lat: i.lat,
+            lng: i.lng,
+            isDone: !!i.isDone
+          }))
+        };
+        compressed = LZString.compressToEncodedURIComponent(JSON.stringify(cleanCourse));
+      }
+
+      const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/') + 1) + 'driver.html';
+      currentShareUrl = `${baseUrl}#import=${compressed}`;
+
+      if (window.QRCode) {
+        new QRCode(container, {
+          text: currentShareUrl,
+          width: 196,
+          height: 196,
+          colorDark: "#0f172a",
+          colorLight: "#ffffff",
+          correctLevel: QRCode.CorrectLevel.L
+        });
+      }
+
+      document.getElementById('qrShareModal').style.display = 'flex';
+    };
+
+    window.closeQrShareModal = function() {
+      document.getElementById('qrShareModal').style.display = 'none';
+    };
+
+    window.copyShareUrlToClipboard = async function() {
+      if (!currentShareUrl) return;
+      try {
+        await navigator.clipboard.writeText(currentShareUrl);
+        showToast("📋 共有URLをクリップボードにコピーしました！");
+      } catch (e) {
+        prompt("下記URLをコピーしてスマホに送ってください:", currentShareUrl);
+      }
+    };
 
     let gpsLogPolyline = null;
     window.loadAndShowGpsTrackLog = async function(courseId, event) {

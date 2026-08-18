@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lively-navi-v16-direct-cloud-sync';
+const CACHE_NAME = 'lively-navi-v17-qr-offline-share';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();

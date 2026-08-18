@@ -705,12 +705,14 @@
   <!-- Firebase SDK (v9 compat) -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <!-- LZString 高圧縮デコードライブラリ -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"></script>
   <script src="firebase-sync.js"></script>
   <script>
-    // --- Service Worker 強制更新 (v16) ---
+    // --- Service Worker 強制更新 (v17) ---
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=16').then((reg) => {
+        navigator.serviceWorker.register('sw.js?v=17').then((reg) => {
           reg.update();
         }).catch(err => console.log('SW registration failed:', err));
       });
@@ -1549,6 +1551,35 @@
 
     // 初期化 & クラウドコース購読 & 運行セッション自動復元
     function initDriverApp() {
+      // 📱 QRコード / 共有リンクからの自動インポート (#import=...)
+      try {
+        const hash = window.location.hash;
+        if (hash && hash.includes('import=')) {
+          const rawCompressed = hash.substring(hash.indexOf('import=') + 7);
+          if (rawCompressed && window.LZString) {
+            const decompressedJson = LZString.decompressFromEncodedURIComponent(rawCompressed);
+            if (decompressedJson) {
+              const importedCourse = JSON.parse(decompressedJson);
+              if (importedCourse && importedCourse.items && importedCourse.items.length > 0) {
+                let courses = getCourses();
+                // 既存の同一IDまたは名前のコースを更新、なければ先頭追加
+                const existingIdx = courses.findIndex(c => c.id === importedCourse.id || c.name === importedCourse.name);
+                if (existingIdx !== -1) {
+                  courses[existingIdx] = importedCourse;
+                } else {
+                  courses.unshift(importedCourse);
+                }
+                saveCourses(courses);
+                alert(`🎉 QRコードからコース「${importedCourse.name}」（${importedCourse.items.length}件）を正常に取り込みました！`);
+                history.replaceState(null, null, ' ');
+              }
+            }
+          }
+        }
+      } catch (importErr) {
+        console.warn("QR/Link import error:", importErr);
+      }
+
       refreshCourses();
 
       try {
