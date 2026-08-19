@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lively-navi-v30-split-arrival-buttons';
+const CACHE_NAME = 'lively-navi-v31-remove-hash-and-depot-sama';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();

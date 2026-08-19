@@ -551,9 +551,9 @@
           <div class="hud-info-row">
             <div class="hud-title-group">
               <span class="hud-order-badge">
-                #<span id="transitOrderNum">1</span>
+                <span id="transitOrderNum">1</span>
               </span>
-              <span class="hud-name" id="transitName">宛名 様</span>
+              <span class="hud-name" id="transitName">宛名</span>
               <span class="hud-address-landscape" id="transitAddressLandscape">住所</span>
             </div>
             <div class="hud-status-group">
@@ -741,10 +741,10 @@
     // キャッシュ互換性用（古いキャッシュが残っている端末でのエラーを100%防止）
     window.hookMapTouchRotation = function() {};
 
-    // --- Service Worker 強制更新 (v30) ---
+    // --- Service Worker 強制更新 (v31) ---
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=30').then((reg) => {
+        navigator.serviceWorker.register('sw.js?v=31').then((reg) => {
           reg.update();
         }).catch(err => console.log('SW registration failed:', err));
       });
@@ -1134,9 +1134,12 @@
         return;
       }
 
+      const orderDisplay = (nextDefault.order === 0) ? 'START' : (nextDefault.code === 'RETURN' ? 'GOAL' : `${nextDefault.order || nextDefault.id}`);
+      const nameDisplay = nextDefault.isDepot ? nextDefault.name : `${nextDefault.name} 様`;
+
       modalCard.innerHTML = `
         <div class="modal-headline">${isFirst ? "【1件目の配送先を選択】" : "【次の配送先を選択】"}</div>
-        <div class="modal-target-title">#${nextDefault.order || nextDefault.id} ${nextDefault.name} 様</div>
+        <div class="modal-target-title">${orderDisplay} ${nameDisplay}</div>
         <div class="modal-target-addr">${nextDefault.address}</div>
         <button class="btn btn-primary" style="width:100%; font-size:15px; padding:14px; margin-bottom:10px;" onclick="chooseNextSequentialTarget()">
           🚚 この順番通りに出発する
@@ -1154,7 +1157,9 @@
     window.resetCurrentCourseAndRestart = function() {
       if (!confirm("すべての配達先を未配達に戻して最初からやり直しますか？")) return;
       lastFinishedOrder = 0;
-      currentCourse.items.forEach(i => i.isDone = false);
+      currentCourse.items.forEach(i => {
+        if (!i.isDepot || i.code === 'RETURN') i.isDone = false;
+      });
       const courses = getCourses();
       const idx = courses.findIndex(c => c.id === currentCourse.id);
       if (idx !== -1) {
@@ -1176,26 +1181,54 @@
       container.innerHTML = '';
 
       currentCourse.items.forEach(item => {
+        const isStartDepot = (item.order === 0 || item.code === 'START');
         const card = document.createElement('div');
         card.className = `dest-select-card ${item.isDone ? 'completed' : ''}`;
-        const codeDisplay = item.code ? `<span style="font-size:11px; color:#64748b; background:#f1f5f9; padding:1px 5px; border-radius:4px; margin-right:4px;">[${item.code}]</span>` : '';
+        const codeDisplay = item.code && !item.isDepot ? `<span style="font-size:11px; color:#64748b; background:#f1f5f9; padding:1px 5px; border-radius:4px; margin-right:4px;">[${item.code}]</span>` : '';
+        
+        const orderDisplay = isStartDepot ? 'START' : (item.code === 'RETURN' ? 'GOAL' : `${item.order || item.id}`);
+        const nameDisplay = item.isDepot ? item.name : `${item.name} 様`;
+
+        let statusBadgeHtml = '';
+        if (isStartDepot) {
+          // 起点は配達チェック不要
+          statusBadgeHtml = `<span style="font-size:11px; padding:2px 8px; border-radius:10px; font-weight:700; background:#10b981; color:#fff;">🏁 出発拠点</span>`;
+        } else if (item.code === 'RETURN') {
+          statusBadgeHtml = `<span style="font-size:11px; padding:2px 8px; border-radius:10px; font-weight:700; background:${item.isDone ? '#10b981' : '#0284c7'}; color:#fff;">${item.isDone ? '✅ 帰着済' : '🏢 帰還地点'}</span>`;
+        } else {
+          statusBadgeHtml = `<span style="font-size:11px; padding:2px 8px; border-radius:10px; font-weight:700; background:${item.isDone ? '#10b981' : '#0d9488'}; color:#fff;">${item.isDone ? '✅ 配達済' : '未配達'}</span>`;
+        }
+
+        let actionButtonsHtml = '';
+        if (isStartDepot) {
+          actionButtonsHtml = `
+            <div style="display:flex; gap:6px; margin-top:8px;">
+              <button class="btn btn-primary" style="flex:1; padding:7px; font-size:12px;" onclick="event.stopPropagation(); setTargetAndBeginTransitDirect('${item.id}')">
+                🏢 起点へ戻る/確認
+              </button>
+            </div>
+          `;
+        } else {
+          actionButtonsHtml = `
+            <div style="display:flex; gap:6px; margin-top:8px;">
+              <button class="btn btn-primary" style="flex:1; padding:8px; font-size:12px;" onclick="event.stopPropagation(); setTargetAndBeginTransitDirect('${item.id}')">
+                🚚 ここへ向かう
+              </button>
+              <button class="btn btn-white" style="padding:8px 12px; font-size:11px;" onclick="event.stopPropagation(); toggleItemDoneState('${item.id}')">
+                ${item.isDone ? '↩ 未完に戻す' : '✅ 完了にする'}
+              </button>
+            </div>
+          `;
+        }
+
         card.innerHTML = `
           <div style="display:flex; justify-content:space-between; align-items:center;">
-            <b style="font-size:15px; font-weight:800; color:#0f172a;">#${item.order || item.id} ${codeDisplay}${item.name} 様</b>
-            <span style="font-size:11px; padding:2px 8px; border-radius:10px; font-weight:700; background:${item.isDone ? '#10b981' : '#0d9488'}; color:#fff;">
-              ${item.isDone ? '✅ 配達済' : '未配達'}
-            </span>
+            <b style="font-size:15px; font-weight:800; color:#0f172a;">${orderDisplay} ${codeDisplay}${nameDisplay}</b>
+            ${statusBadgeHtml}
           </div>
           <div style="font-size:12px; color:#64748b; margin:4px 0;">${item.address}</div>
           ${item.memo ? `<div style="font-size:11px; color:#d97706; font-weight:600;">📝 ${item.memo}</div>` : ''}
-          <div style="display:flex; gap:6px; margin-top:10px;">
-            <button class="btn btn-primary" style="flex:1; padding:8px; font-size:12px;" onclick="event.stopPropagation(); setTargetAndBeginTransitDirect(${item.id})">
-              🚚 ここへ向かう
-            </button>
-            <button class="btn btn-white" style="padding:8px 12px; font-size:11px;" onclick="event.stopPropagation(); toggleItemDoneState(${item.id})">
-              ${item.isDone ? '↩ 未完に戻す' : '✅ 完了にする'}
-            </button>
-          </div>
+          ${actionButtonsHtml}
         `;
         card.onclick = () => {
           document.getElementById('all-destinations-modal').style.display = 'none';
@@ -1208,7 +1241,7 @@
     };
 
     window.toggleItemDoneState = function(itemId) {
-      const item = currentCourse.items.find(i => i.id === itemId);
+      const item = currentCourse.items.find(i => String(i.id) === String(itemId));
       if (item) {
         item.isDone = !item.isDone;
         const courses = getCourses();
@@ -1243,8 +1276,11 @@
       document.getElementById('all-destinations-modal').style.display = 'none';
       document.getElementById('transit-target-card').style.display = 'block';
 
-      document.getElementById('transitOrderNum').innerText = item.order || item.id;
-      document.getElementById('transitName').innerText = `${item.name} 様`;
+      const orderDisplay = (item.order === 0) ? 'START' : (item.code === 'RETURN' ? 'GOAL' : `${item.order || item.id}`);
+      const nameDisplay = item.isDepot ? item.name : `${item.name} 様`;
+
+      document.getElementById('transitOrderNum').innerText = orderDisplay;
+      document.getElementById('transitName').innerText = nameDisplay;
       document.getElementById('transitAddress').innerText = item.address;
       const addrLandEl = document.getElementById('transitAddressLandscape');
       if (addrLandEl) addrLandEl.innerText = `(${item.address})`;
@@ -1415,7 +1451,9 @@
       calculateTransitRoute(currentTargetItem);
       checkProximityToTarget();
 
-      alert(`🎯 #${currentTargetItem.order || currentTargetItem.id} ${currentTargetItem.name} 様の地点位置を修正し、【地点マスター】に登録しました！\n次回以降の配送でも、この正確な位置にピンが立ちます。`);
+      const targetOrderLabel = (currentTargetItem.order === 0) ? 'START' : (currentTargetItem.code === 'RETURN' ? 'GOAL' : `${currentTargetItem.order || currentTargetItem.id}`);
+      const targetNameLabel = currentTargetItem.isDepot ? currentTargetItem.name : `${currentTargetItem.name} 様`;
+      alert(`🎯 ${targetOrderLabel} ${targetNameLabel} の地点位置を修正し、【地点マスター】に登録しました！\n次回以降の配送でも、この正確な位置にピンが立ちます。`);
     }
 
     // --- マップ初期化 (高視認性 CARTO Voyager / OSM / 国土地理院 / 航空写真) ---
@@ -1745,8 +1783,8 @@
           iconSize = [26, 26];
           iconAnchor = [13, 13];
         } else {
-          // 未達: 配達順番号バッジ
-          iconHtml = `<div class="dest-pin-badge">#${item.order || item.id}</div>`;
+          // 未達: 配達順番号バッジ（#なしの数字のみ）
+          iconHtml = `<div class="dest-pin-badge">${item.order || item.id}</div>`;
           iconSize = [26, 26];
           iconAnchor = [13, 13];
         }
@@ -1763,7 +1801,7 @@
           zIndexOffset: isTarget ? 2000 : (item.isDepot ? 1500 : 500)
         }).addTo(map);
 
-        const titleText = (item.order === 0) ? `🏁 ${item.name}` : (item.code === 'RETURN' ? `🏢 ${item.name}` : `#${item.order || item.id} ${item.name} 様`);
+        const titleText = (item.order === 0) ? `🏁 ${item.name}` : (item.code === 'RETURN' ? `🏢 ${item.name}` : `${item.order || item.id} ${item.name} 様`);
 
         marker.bindPopup(`
           <div style="min-width:170px; font-size:12px; font-family:'Noto Sans JP',sans-serif;">
