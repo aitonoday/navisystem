@@ -900,16 +900,25 @@
         let coords = null;
         let isFromMaster = false;
 
-        // 1. 地点補正マスターを優先検索
-        if (window.findCorrectedCoords) {
-          const master = findCorrectedCoords(rawAddress, customerName);
+        // 1. 顧客コード主キーで地点マスターを最優先検索
+        if (customerCode && window.findCustomerLocation) {
+          const master = findCustomerLocation(customerCode);
           if (master) {
             coords = { lat: master.lat, lng: master.lng };
             isFromMaster = true;
           }
         }
 
-        // 2. マスターに無ければジオコーディング
+        // 2. 過去互換（住所・名前検索）
+        if (!coords && window.findCorrectedCoords) {
+          const master = findCorrectedCoords(rawAddress, customerName, customerCode);
+          if (master) {
+            coords = { lat: master.lat, lng: master.lng };
+            isFromMaster = true;
+          }
+        }
+
+        // 3. マスターに無ければジオコーディング
         if (!coords) {
           coords = await geocodeAddress(rawAddress);
         }
@@ -1294,9 +1303,9 @@
           item.lng = newPos.lng;
           item.isCorrectedMaster = true;
 
-          // 1. 地点補正マスターに保存（次回以降のCSVや他コースに自動反映）
-          if (window.saveLocationCorrection) {
-            await saveLocationCorrection(item.address, item.name, newPos.lat, newPos.lng);
+          // 1. 顧客コード主キーで地点マスターに保存（完全匿名化）
+          if (item.code && window.saveCustomerLocation) {
+            await saveCustomerLocation(item.code, newPos.lat, newPos.lng);
           }
 
           // 2. 現在の保存済みコースも更新

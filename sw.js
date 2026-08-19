@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lively-navi-v34-round-dotted-tracks';
+const CACHE_NAME = 'lively-navi-v35-security-customer-code-key';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();

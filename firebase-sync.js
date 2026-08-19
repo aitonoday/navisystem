@@ -1,160 +1,155 @@
 /**
- * Lively Navi - Firebase Realtime Database 同期モジュール (地点マスター対応版)
+ * LIVELY NAVI - Firebase リアルタイムクラウド同期モジュール (Security-Enhanced Edition)
+ * 【セキュリティ強化仕様】
+ * - 個人情報（氏名・住所）はクラウド上に保存せず、ローカル端末（手元）のみで保持。
+ * - クラウド上の永続マスターは「顧客コード（主キー）」と「緯度・経度座標」「区間走行軌跡」のみを完全匿名化して保持。
+ * - コース計画を削除しても顧客コード主キーのマスターは保持され、次回CSV取込時に自動的に手元で結合・復元。
  */
 
+const FIREBASE_CONFIG_STORAGE_KEY = 'lively_navi_firebase_config';
 const DEFAULT_FIREBASE_CONFIG = {
-  apiKey: "AIzaSyBk4ap0jdbWdy83Titr03rvOd0PsT597Ro",
-  authDomain: "lively-navi.firebaseapp.com",
-  projectId: "lively-navi",
-  storageBucket: "lively-navi.firebasestorage.app",
-  messagingSenderId: "218951573577",
-  appId: "1:218951573577:web:786794bb73686b01039f98",
-  databaseURL: "https://lively-navi-default-rtdb.asia-southeast1.firebasedatabase.app"
+  databaseURL: "https://lively-navi-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "lively-navi"
 };
 
-const FIREBASE_CONFIG_KEY = 'lively_navi_firebase_config';
-const LOCATION_CORRECTIONS_KEY = 'lively_navi_location_corrections';
 let firebaseApp = null;
 let firebaseDb = null;
 
-// --- Firebase初期化 ---
+// Firebase 設定の保存と取得
 function getSavedFirebaseConfig() {
   try {
-    const raw = localStorage.getItem(FIREBASE_CONFIG_KEY);
-    if (raw) return JSON.parse(raw);
+    const saved = localStorage.getItem(FIREBASE_CONFIG_STORAGE_KEY);
+    if (saved) return JSON.parse(saved);
   } catch (e) {}
   return DEFAULT_FIREBASE_CONFIG;
 }
 
 function saveFirebaseConfig(config) {
   if (!config) {
-    localStorage.removeItem(FIREBASE_CONFIG_KEY);
-    return;
+    localStorage.removeItem(FIREBASE_CONFIG_STORAGE_KEY);
+  } else {
+    localStorage.setItem(FIREBASE_CONFIG_STORAGE_KEY, JSON.stringify(config));
   }
-  localStorage.setItem(FIREBASE_CONFIG_KEY, JSON.stringify(config));
   initFirebaseApp(config);
 }
 
-function initFirebaseApp(config) {
-  const activeConfig = config || DEFAULT_FIREBASE_CONFIG;
-  if (!activeConfig || !activeConfig.apiKey) return false;
+// Firebase SDK 初期化
+function initFirebaseApp(config = getSavedFirebaseConfig()) {
+  if (!config || !config.databaseURL) {
+    firebaseApp = null;
+    firebaseDb = null;
+    return false;
+  }
 
   try {
-    if (!window.firebase) return false;
-
-    if (!firebase.apps.length) {
-      firebaseApp = firebase.initializeApp(activeConfig);
+    if (firebase.apps.length > 0) {
+      firebaseApp = firebase.apps[0];
     } else {
-      firebaseApp = firebase.app();
+      firebaseApp = firebase.initializeApp(config);
     }
-
-    const dbUrl = activeConfig.databaseURL || "https://lively-navi-default-rtdb.asia-southeast1.firebasedatabase.app";
-    firebaseDb = firebase.app().database(dbUrl);
-    console.log("✅ Firebase Connected to:", dbUrl);
+    firebaseDb = firebase.database();
     return true;
   } catch (err) {
-    try {
-      firebaseDb = firebase.app().database("https://lively-navi-default-rtdb.firebaseio.com");
-      return true;
-    } catch (e) {
-      console.error("Firebase init failed:", e);
-      return false;
-    }
+    console.warn("Firebase Init Warning:", err);
+    return false;
   }
 }
 
-// --- 1. 地点補正マスター（Location Corrections）の永続保存＆自動検索 ---
+const CLOUD_RTDB_BASE = "https://lively-navi-default-rtdb.asia-southeast1.firebasedatabase.app";
 
-function normalizeAddressKey(address, name = "") {
-  const cleanAddr = (address || "").replace(/[\s　\-\ー－]/g, "").trim();
-  const cleanName = (name || "").replace(/[\s　]/g, "").trim();
-  // Firebaseのキーとして使用できない文字を除去
-  return `${cleanAddr}_${cleanName}`.replace(/[\.\#\$\[\]\/]/g, "_");
-}
+// =========================================================================
+// 1. 地点位置マスター（顧客コード主キー: 個人情報を持たず、コードと座標のみ保持）
+// =========================================================================
 
-// 地点修正をローカル＆クラウドマスターへ登録
-async function saveLocationCorrection(address, name, lat, lng) {
-  if (!address || !lat || !lng) return false;
+const CUSTOMER_LOCATIONS_KEY = 'lively_navi_customer_locations';
 
-  const key = normalizeAddressKey(address, name);
+// 顧客コードをキーとして地点位置（座標）を保存
+async function saveCustomerLocation(code, lat, lng) {
+  if (!code || !lat || !lng) return false;
+  const key = String(code).trim();
   const data = {
-    address: address.trim(),
-    name: (name || "").trim(),
     lat: parseFloat(lat),
     lng: parseFloat(lng),
     updatedAt: Date.now()
   };
 
-  // 1. ローカルストレージに即時保存
+  // 1. ローカル保存
   try {
-    const corrections = getLocalLocationCorrections();
-    corrections[key] = data;
-    localStorage.setItem(LOCATION_CORRECTIONS_KEY, JSON.stringify(corrections));
+    const locs = getLocalCustomerLocations();
+    locs[key] = data;
+    localStorage.setItem(CUSTOMER_LOCATIONS_KEY, JSON.stringify(locs));
   } catch (e) {
-    console.warn("Local correction save error:", e);
+    console.warn("Local customer location save error:", e);
   }
 
-  // 2. クラウド（Firebase）へ非同期保存
-  if (!firebaseDb) initFirebaseApp(getSavedFirebaseConfig());
-  if (firebaseDb) {
-    try {
-      await firebaseDb.ref(`location_corrections/${key}`).set(data);
-      console.log("✅ Location correction saved to cloud:", key);
-    } catch (err) {
-      console.warn("Cloud correction save error:", err);
-    }
+  // 2. クラウド（Firebase RTDB）へ保存 (REST API & SDK)
+  try {
+    await fetch(`${CLOUD_RTDB_BASE}/customer_locations/${encodeURIComponent(key)}.json`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    console.log("✅ Customer location master saved to cloud for code:", key);
+  } catch (err) {
+    console.warn("Cloud customer location save error:", err);
   }
 
   return true;
 }
 
-// ローカルに保存されている全地点補正を取得
-function getLocalLocationCorrections() {
+// ローカルに保存されている全顧客地点マスターを取得
+function getLocalCustomerLocations() {
   try {
-    const raw = localStorage.getItem(LOCATION_CORRECTIONS_KEY);
+    const raw = localStorage.getItem(CUSTOMER_LOCATIONS_KEY);
     if (raw) return JSON.parse(raw);
   } catch (e) {}
   return {};
 }
 
-// 住所や名前から過去の修正座標を検索（完全一致または住所部分一致）
-function findCorrectedCoords(address, name = "") {
-  if (!address) return null;
-  const corrections = getLocalLocationCorrections();
-
-  // 1. 住所＋名前の完全一致
-  const fullKey = normalizeAddressKey(address, name);
-  if (corrections[fullKey]) {
-    return { lat: corrections[fullKey].lat, lng: corrections[fullKey].lng, isMaster: true };
+// 顧客コードから過去の登録座標を検索
+function findCustomerLocation(code) {
+  if (!code) return null;
+  const key = String(code).trim();
+  const locs = getLocalCustomerLocations();
+  if (locs[key]) {
+    return { lat: locs[key].lat, lng: locs[key].lng, isMaster: true };
   }
-
-  // 2. 住所のみの一致
-  const cleanAddr = (address || "").replace(/[\s　\-\ー－]/g, "").trim();
-  for (const k in corrections) {
-    const item = corrections[k];
-    const itemAddr = (item.address || "").replace(/[\s　\-\ー－]/g, "").trim();
-    if (itemAddr && (itemAddr === cleanAddr || cleanAddr.startsWith(itemAddr) || itemAddr.startsWith(cleanAddr))) {
-      return { lat: item.lat, lng: item.lng, isMaster: true };
-    }
-  }
-
   return null;
 }
 
-// クラウド上の地点補正マスターを購読＆ローカル同期
-function subscribeLocationCorrections(onLoaded) {
+// 旧互換用 (住所・名前検索から顧客コード検索へ安全フォールバック)
+function findCorrectedCoords(address, name = "", code = "") {
+  if (code) {
+    const found = findCustomerLocation(code);
+    if (found) return found;
+  }
+  return null;
+}
+
+// クラウド上の地点マスター(/customer_locations)を購読＆ローカル同期
+function subscribeCustomerLocations(onLoaded) {
+  // 初回 REST 即時取得
+  fetchCustomerLocationsDirect().then(locs => {
+    if (locs) {
+      const local = getLocalCustomerLocations();
+      const merged = { ...local, ...locs };
+      localStorage.setItem(CUSTOMER_LOCATIONS_KEY, JSON.stringify(merged));
+      if (onLoaded) onLoaded(merged);
+    }
+  }).catch(() => {});
+
   if (!firebaseDb) initFirebaseApp(getSavedFirebaseConfig());
   if (!firebaseDb) return null;
 
   try {
-    const ref = firebaseDb.ref('location_corrections');
+    const ref = firebaseDb.ref('customer_locations');
     ref.on('value', (snapshot) => {
       const data = snapshot.val();
       if (data && typeof data === 'object') {
-        const local = getLocalLocationCorrections();
+        const local = getLocalCustomerLocations();
         const merged = { ...local, ...data };
-        localStorage.setItem(LOCATION_CORRECTIONS_KEY, JSON.stringify(merged));
-        console.log("✅ Synced location corrections master:", Object.keys(merged).length, "points");
+        localStorage.setItem(CUSTOMER_LOCATIONS_KEY, JSON.stringify(merged));
+        console.log("✅ Synced customer locations master:", Object.keys(merged).length, "codes");
         if (onLoaded) onLoaded(merged);
       }
     });
@@ -164,9 +159,17 @@ function subscribeLocationCorrections(onLoaded) {
   }
 }
 
-// --- 2. コース情報の送受信（REST APIダイレクト同期 ＋ Firebase SDK ハイブリッド） ---
+async function fetchCustomerLocationsDirect() {
+  try {
+    const res = await fetch(`${CLOUD_RTDB_BASE}/customer_locations.json?t=${Date.now()}`);
+    if (res.ok) return await res.json();
+  } catch (e) {}
+  return null;
+}
 
-const CLOUD_RTDB_BASE = "https://lively-navi-default-rtdb.asia-southeast1.firebasedatabase.app";
+// =========================================================================
+// 2. コース情報の送受信（PC ➔ スマホへのリアルタイム配信）
+// =========================================================================
 
 async function uploadCourseToCloud(course) {
   const courseData = {
@@ -176,7 +179,6 @@ async function uploadCourseToCloud(course) {
 
   let isSuccess = false;
 
-  // 1. ダイレクト REST API (PUT) - SDK接続に依存せず100%確実に同期
   try {
     const res = await fetch(`${CLOUD_RTDB_BASE}/courses/${course.id}.json`, {
       method: 'PUT',
@@ -191,7 +193,6 @@ async function uploadCourseToCloud(course) {
     console.warn("Direct REST upload error:", restErr);
   }
 
-  // 2. Firebase SDK経由でも保存
   try {
     if (!firebaseDb) initFirebaseApp(getSavedFirebaseConfig());
     if (firebaseDb) {
@@ -204,7 +205,6 @@ async function uploadCourseToCloud(course) {
 }
 
 function subscribeCoursesFromCloud(onCoursesUpdated) {
-  // 初回即時取得 (REST API)
   fetchCoursesFromCloudDirect().then(courses => {
     if (courses && courses.length > 0) {
       onCoursesUpdated(courses);
@@ -231,52 +231,28 @@ function subscribeCoursesFromCloud(onCoursesUpdated) {
   }
 }
 
-// クラウドから直接コースを1回即時取得する関数 (REST API ダイレクト)
 async function fetchCoursesFromCloudDirect() {
-  // 1. ダイレクト REST API (GET) - 最優先で即座に取得
   try {
     const res = await fetch(`${CLOUD_RTDB_BASE}/courses.json?t=${Date.now()}`);
     if (res.ok) {
       const data = await res.json();
       if (data && typeof data === 'object') {
-        let list = Object.values(data).filter(c => c && c.items && c.items.length > 0);
-        if (list.length > 0) {
-          // 更新日時順（新しい順）にソート
-          list.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
-          console.log(`✅ Fetched ${list.length} courses directly from cloud REST API`);
-          return list;
-        }
+        return Object.values(data).filter(c => c && c.items && c.items.length > 0);
       }
     }
   } catch (restErr) {
     console.warn("Direct REST fetch error:", restErr);
   }
-
-  // 2. Firebase SDK fallback
-  try {
-    if (!firebaseDb) initFirebaseApp(getSavedFirebaseConfig());
-    if (firebaseDb) {
-      const snapshot = await firebaseDb.ref('courses').once('value');
-      const data = snapshot.val();
-      if (data && typeof data === 'object') {
-        return Object.values(data).filter(c => c && c.items && c.items.length > 0);
-      }
-    }
-  } catch (e) {}
-
   return [];
 }
 
-// クラウドからコースを削除する関数
 async function deleteCourseFromCloud(courseId) {
   try {
-    // 1. ダイレクト REST API (DELETE)
     await fetch(`${CLOUD_RTDB_BASE}/courses/${courseId}.json`, { method: 'DELETE' });
     console.log("✅ Deleted course from cloud via REST:", courseId);
   } catch (e) {}
 
   try {
-    // 2. Firebase SDK fallback
     if (!firebaseDb) initFirebaseApp(getSavedFirebaseConfig());
     if (firebaseDb) {
       await firebaseDb.ref(`courses/${courseId}`).remove();
@@ -288,12 +264,11 @@ async function deleteCourseFromCloud(courseId) {
 
 async function updateItemStatusToCloud(courseId, itemId, isDone) {
   try {
-    // REST API で即時更新
     const res = await fetch(`${CLOUD_RTDB_BASE}/courses/${courseId}/items.json`);
     if (res.ok) {
       const items = await res.json();
       if (Array.isArray(items)) {
-        const idx = items.findIndex(i => i && i.id === itemId);
+        const idx = items.findIndex(i => i && String(i.id) === String(itemId));
         if (idx !== -1) {
           items[idx].isDone = isDone;
           items[idx].arrivedAt = isDone ? Date.now() : null;
@@ -316,7 +291,9 @@ async function updateItemStatusToCloud(courseId, itemId, isDone) {
   }
 }
 
-// --- 3. ドライバー位置情報の送受信 ---
+// =========================================================================
+// 3. ドライバー位置情報の送受信
+// =========================================================================
 
 async function updateDriverLocationToCloud(driverId, locationData) {
   if (!firebaseDb) return false;
@@ -331,30 +308,33 @@ async function updateDriverLocationToCloud(driverId, locationData) {
   }
 }
 
-function subscribeDriverLocations(onDriversUpdated) {
+function subscribeDriverLocations(onLocationsUpdated) {
   if (!firebaseDb) initFirebaseApp(getSavedFirebaseConfig());
   if (!firebaseDb) return null;
 
   try {
     const ref = firebaseDb.ref('drivers');
     ref.on('value', (snapshot) => {
-      const data = snapshot.val();
-      onDriversUpdated(data || {});
+      const data = snapshot.val() || {};
+      onLocationsUpdated(data);
     });
     return ref;
-  } catch (e) {
+  } catch (err) {
     return null;
   }
 }
 
-// --- 4. 走行ログ（GPS軌跡）の蓄積と取得 ---
+// =========================================================================
+// 4. GPS 走行ログの送受信 & 区間軌跡（顧客コードA ➔ 顧客コードB）マスター
+// =========================================================================
 
 async function appendGpsLogToCloud(courseId, point) {
-  if (!firebaseDb) return false;
+  if (!courseId || !point) return false;
   try {
-    await firebaseDb.ref(`logs/${courseId}/points`).push({
-      ...point,
-      time: point.time || Date.now()
+    await fetch(`${CLOUD_RTDB_BASE}/logs/${courseId}/points.json`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(point)
     });
     return true;
   } catch (err) {
@@ -363,7 +343,6 @@ async function appendGpsLogToCloud(courseId, point) {
 }
 
 async function fetchGpsLogFromCloud(courseId) {
-  // 1. ダイレクト REST API (GET) - 指定courseIdを検索
   try {
     const res = await fetch(`${CLOUD_RTDB_BASE}/logs/${courseId}/points.json?t=${Date.now()}`);
     if (res.ok) {
@@ -375,7 +354,6 @@ async function fetchGpsLogFromCloud(courseId) {
     }
   } catch (e) {}
 
-  // 2. 指定IDで見つからない場合、クラウド上の全ログから最新・最大のログを自動検索
   try {
     const allRes = await fetch(`${CLOUD_RTDB_BASE}/logs.json?t=${Date.now()}`);
     if (allRes.ok) {
@@ -391,59 +369,55 @@ async function fetchGpsLogFromCloud(courseId) {
             }
           }
         });
-        if (bestPoints.length > 0) {
-          console.log(`✅ Fallback found ${bestPoints.length} GPS points from cloud logs`);
-          return bestPoints;
-        }
+        if (bestPoints.length > 0) return bestPoints;
       }
     }
   } catch (e2) {}
 
-// --- 5. 区間（A➔B）ごとの登録軌跡ログ（お手本ルート）の保存と取得 ---
+  return [];
+}
 
-async function saveLegGpsLogToCloud(courseId, legKey, points) {
-  if (!courseId || !legKey || !points || points.length === 0) return false;
+// --- 顧客コードA ➔ 顧客コードB の区間軌跡マスター保存・取得 ---
+
+async function saveLegTrackByCodes(fromCode, toCode, points) {
+  if (!fromCode || !toCode || !points || points.length === 0) return false;
+  const key = `${String(fromCode).trim()}_to_${String(toCode).trim()}`;
   try {
-    // 1. ダイレクト REST API (PUT)
-    await fetch(`${CLOUD_RTDB_BASE}/logs/${courseId}/legs/${legKey}.json`, {
+    await fetch(`${CLOUD_RTDB_BASE}/leg_tracks/${encodeURIComponent(key)}.json`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(points)
     });
-    console.log(`✅ Saved ${points.length} GPS points for leg ${legKey} to cloud`);
+    console.log(`✅ Saved ${points.length} GPS points for leg track [${key}]`);
     return true;
   } catch (e) {
-    console.warn("saveLegGpsLog error:", e);
+    console.warn("saveLegTrackByCodes error:", e);
     return false;
   }
 }
 
-async function fetchLegGpsLogFromCloud(courseId, legKey) {
-  if (!courseId || !legKey) return [];
+async function fetchLegTrackByCodes(fromCode, toCode) {
+  if (!fromCode || !toCode) return [];
+  const key = `${String(fromCode).trim()}_to_${String(toCode).trim()}`;
   try {
-    // 1. ダイレクト REST API (GET)
-    const res = await fetch(`${CLOUD_RTDB_BASE}/logs/${courseId}/legs/${legKey}.json?t=${Date.now()}`);
+    const res = await fetch(`${CLOUD_RTDB_BASE}/leg_tracks/${encodeURIComponent(key)}.json?t=${Date.now()}`);
     if (res.ok) {
       const data = await res.json();
-      if (data && Array.isArray(data) && data.length > 0) {
-        return data;
-      } else if (data && typeof data === 'object') {
-        const list = Object.values(data);
-        if (list.length > 0) return list;
-      }
+      if (data && Array.isArray(data)) return data;
+      if (data && typeof data === 'object') return Object.values(data);
     }
   } catch (e) {}
 
-  // 2. 指定IDで見つからない場合、全ログ内の legs を検索
+  // 旧フォーマット(/logs/{courseId}/legs)からのフォールバック検索
   try {
     const allRes = await fetch(`${CLOUD_RTDB_BASE}/logs.json?t=${Date.now()}`);
     if (allRes.ok) {
       const allLogs = await allRes.json();
-      if (allLogs && typeof allLogs === 'object') {
+      if (allLogs) {
         for (const cid of Object.keys(allLogs)) {
           const l = allLogs[cid];
-          if (l && l.legs && l.legs[legKey]) {
-            const pts = Array.isArray(l.legs[legKey]) ? l.legs[legKey] : Object.values(l.legs[legKey]);
+          if (l && l.legs && l.legs[key]) {
+            const pts = Array.isArray(l.legs[key]) ? l.legs[key] : Object.values(l.legs[key]);
             if (pts.length > 0) return pts;
           }
         }
@@ -454,20 +428,29 @@ async function fetchLegGpsLogFromCloud(courseId, legKey) {
   return [];
 }
 
-// 初期化実行 & 地点補正マスターの自動同期
+// 初期化実行 & 顧客地点マスターの自動同期
 document.addEventListener('DOMContentLoaded', () => {
   const saved = getSavedFirebaseConfig();
   initFirebaseApp(saved);
-  subscribeLocationCorrections();
+  subscribeCustomerLocations();
 });
 
 // グローバル公開（明示的エクスポート）
 if (typeof window !== 'undefined') {
+  window.saveCustomerLocation = saveCustomerLocation;
+  window.getLocalCustomerLocations = getLocalCustomerLocations;
+  window.findCustomerLocation = findCustomerLocation;
+  window.findCorrectedCoords = findCorrectedCoords;
+  window.subscribeCustomerLocations = subscribeCustomerLocations;
+  window.saveLegTrackByCodes = saveLegTrackByCodes;
+  window.fetchLegTrackByCodes = fetchLegTrackByCodes;
   window.fetchGpsLogFromCloud = fetchGpsLogFromCloud;
-  window.saveLegGpsLogToCloud = saveLegGpsLogToCloud;
-  window.fetchLegGpsLogFromCloud = fetchLegGpsLogFromCloud;
   window.deleteCourseFromCloud = deleteCourseFromCloud;
   window.fetchCoursesFromCloudDirect = fetchCoursesFromCloudDirect;
-  window.saveLocationCorrection = saveLocationCorrection;
-  window.findCorrectedCoords = findCorrectedCoords;
+  window.uploadCourseToCloud = uploadCourseToCloud;
+  window.updateItemStatusToCloud = updateItemStatusToCloud;
+  window.updateDriverLocationToCloud = updateDriverLocationToCloud;
+  window.subscribeCoursesFromCloud = subscribeCoursesFromCloud;
+  window.subscribeDriverLocations = subscribeDriverLocations;
+  window.appendGpsLogToCloud = appendGpsLogToCloud;
 }

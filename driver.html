@@ -741,10 +741,10 @@
     // キャッシュ互換性用（古いキャッシュが残っている端末でのエラーを100%防止）
     window.hookMapTouchRotation = function() {};
 
-    // --- Service Worker 強制更新 (v34) ---
+    // --- Service Worker 強制更新 (v35) ---
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=34').then((reg) => {
+        navigator.serviceWorker.register('sw.js?v=35').then((reg) => {
           reg.update();
         }).catch(err => console.log('SW registration failed:', err));
       });
@@ -783,8 +783,9 @@
     let map = null;
     let markers = [];
     let currentRouteLayer = null;
-    let registeredLegPolyline = null; // 登録済み区間軌跡（赤い点線）
+    let registeredLegPolyline = null; // 登録済み区間軌跡（赤色の丸ドット点線）
     let currentLegFromOrder = 0; // 今回の区間の出発地点オーダー番号
+    let currentLegFromCode = 'DEPOT_50'; // 今回の区間の出発地点顧客コード
     let isRouteLineVisible = localStorage.getItem('lively_navi_route_line_visible') !== 'false'; // デフォルトON
 
     let userCarMarker = null;
@@ -1010,17 +1011,17 @@
         currentCourse = courses.find(c => c.id === courseId);
         if (!currentCourse) return alert("コースが見つかりません");
 
-        // 地点補正マスターを最新適用
-        if (window.findCorrectedCoords) {
-          currentCourse.items.forEach(item => {
-            const master = findCorrectedCoords(item.address, item.name);
+        // 1. 顧客コード主キーで地点マスターを最新適用
+        currentCourse.items.forEach(item => {
+          if (item.code && window.findCustomerLocation) {
+            const master = findCustomerLocation(item.code);
             if (master) {
               item.lat = master.lat;
               item.lng = master.lng;
               item.isCorrectedMaster = true;
             }
-          });
-        }
+          }
+        });
 
         // 起点・帰着アイテムをコースへ確実に統合
         const realItems = currentCourse.items.filter(i => !i.isDepot);
@@ -1028,10 +1029,12 @@
           it.order = idx + 1; // 1件目〜N件目
         });
 
+        const depotCode = depot.code ? (`DEPOT_${depot.code}`) : (`DEPOT_${depot.id}`);
+
         const startDepotItem = {
           id: 'depot_start_' + depot.id,
           order: 0,
-          code: 'START',
+          code: depotCode,
           name: `【起点】${depot.name}`,
           address: depot.address,
           lat: depot.lat,
@@ -1044,7 +1047,7 @@
         const returnDepotItem = {
           id: 'depot_return_' + depot.id,
           order: realItems.length + 1,
-          code: 'RETURN',
+          code: depotCode,
           name: `【帰着】${depot.name}`,
           address: depot.address,
           lat: depot.lat,
@@ -1056,6 +1059,8 @@
 
         currentCourse.items = [startDepotItem, ...realItems, returnDepotItem];
         currentCourse.depot = depot;
+        currentLegFromCode = depotCode;
+        currentLegFromOrder = 0;
 
         // 完了済み地点から lastFinishedOrder を自動算出
         const doneItems = currentCourse.items.filter(i => i.isDone);
@@ -1298,26 +1303,25 @@
       currentLegLogs = [];
       plotMarkers();
 
-      // 🔴 A地点からB地点の区間登録軌跡（赤い点線）を取得・描画
-      loadAndDrawRegisteredLeg(currentCourse.id, currentLegFromOrder, targetOrder);
+      // 🔴 顧客コード主キー（fromCode ➔ toCode）で登録軌跡（赤色の丸ドット点線）を取得・描画
+      const toCode = item.code || `ORDER_${targetOrder}`;
+      loadAndDrawRegisteredLeg(currentLegFromCode, toCode);
 
       checkProximityToTarget();
       calculateTransitRoute(item);
     };
 
-    // 🔴 該当区間（A➔B）の登録軌跡（赤い点線）の取得・描画
-    async function loadAndDrawRegisteredLeg(courseId, fromOrder, toOrder) {
+    // 🔴 該当区間（顧客コードA ➔ 顧客コードB）の登録軌跡（赤色の丸ドット点線）の取得・描画
+    async function loadAndDrawRegisteredLeg(fromCode, toCode) {
       if (registeredLegPolyline && map) {
         map.removeLayer(registeredLegPolyline);
         registeredLegPolyline = null;
       }
-      if (!courseId || toOrder === undefined || toOrder === null) return;
-
-      const legKey = `leg_${fromOrder}_to_${toOrder}`;
+      if (!fromCode || !toCode) return;
 
       let points = [];
-      if (window.fetchLegGpsLogFromCloud) {
-        points = await fetchLegGpsLogFromCloud(courseId, legKey);
+      if (window.fetchLegTrackByCodes) {
+        points = await fetchLegTrackByCodes(fromCode, toCode);
       }
 
       if (points && points.length > 0) {
@@ -1331,6 +1335,7 @@
           lineCap: 'round',
           lineJoin: 'round'
         }).addTo(map);
+        console.log(`✅ Loaded leg track for [${fromCode} -> ${toCode}]: ${points.length} pts`);
       }
     }
 
@@ -1433,9 +1438,9 @@
       currentTargetItem.lng = lng;
       currentTargetItem.isCorrectedMaster = true;
 
-      // 1. 地点補正マスターに保存（次回以降のCSVや他の配送でも永続自動適用）
-      if (window.saveLocationCorrection) {
-        await saveLocationCorrection(currentTargetItem.address, currentTargetItem.name, lat, lng);
+      // 1. 顧客コード主キーで地点マスターに保存（完全匿名化）
+      if (currentTargetItem.code && window.saveCustomerLocation) {
+        await saveCustomerLocation(currentTargetItem.code, lat, lng);
       }
 
       // 2. コースデータを保存
@@ -1666,19 +1671,16 @@
         saveCourses(courses);
       }
 
-      if (window.updateItemStatusToCloud && currentCourse) {
-        updateItemStatusToCloud(currentCourse.id, currentTargetItem.id, true);
-      }
-
       // ⭐「登録到着」ボタンの場合のみ、今回の区間GPS走行ログをお手本として上書き保存！
+      const toCode = currentTargetItem.code || `ORDER_${lastFinishedOrder}`;
       if (isRegister) {
-        if (window.saveLegGpsLogToCloud && currentCourse && currentLegLogs.length > 0) {
-          const legKey = `leg_${currentLegFromOrder}_to_${lastFinishedOrder}`;
-          saveLegGpsLogToCloud(currentCourse.id, legKey, currentLegLogs);
+        if (window.saveLegTrackByCodes && currentLegLogs.length > 0) {
+          saveLegTrackByCodes(currentLegFromCode, toCode, currentLegLogs);
         }
       }
       // 「通常到着」の場合は保存・上書きをスキップ（迷走や回り道などの誤登録を完全防止）
 
+      currentLegFromCode = toCode; // 次の出発地点顧客コードを更新
       currentLegFromOrder = lastFinishedOrder; // 次の出発地点オーダーを更新
 
       if (currentRouteLayer) {
