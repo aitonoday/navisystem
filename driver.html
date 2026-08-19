@@ -714,10 +714,10 @@
     // キャッシュ互換性用（古いキャッシュが残っている端末でのエラーを100%防止）
     window.hookMapTouchRotation = function() {};
 
-    // --- Service Worker 強制更新 (v25) ---
+    // --- Service Worker 強制更新 (v26) ---
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=25').then((reg) => {
+        navigator.serviceWorker.register('sw.js?v=26').then((reg) => {
           reg.update();
         }).catch(err => console.log('SW registration failed:', err));
       });
@@ -741,6 +741,7 @@
 
     let currentCourse = null;
     let currentTargetItem = null;
+    let lastFinishedOrder = 0;
     let lastArrivedCoords = null;
     let map = null;
     let markers = [];
@@ -891,6 +892,14 @@
 
         currentCourse.items.sort((a, b) => (a.order || a.id) - (b.order || b.id));
 
+        // 完了済み地点から lastFinishedOrder を自動算出
+        const doneItems = currentCourse.items.filter(i => i.isDone);
+        if (doneItems.length > 0) {
+          lastFinishedOrder = Math.max(...doneItems.map(i => (i.order !== undefined && i.order !== null) ? Number(i.order) : Number(i.id)));
+        } else {
+          lastFinishedOrder = 0;
+        }
+
         document.getElementById('view-course-select').style.display = 'none';
         document.getElementById('view-nav-main').style.display = 'flex';
 
@@ -911,13 +920,38 @@
       refreshCourses();
     };
 
+    // 直前配送地点以降の未配達を優先案内するスマート判定
+    function getNextRecommendedTarget() {
+      if (!currentCourse || !currentCourse.items || currentCourse.items.length === 0) return null;
+
+      // 1. 直前に配送/完了した地点(lastFinishedOrder) より後ろの順番にある「未配達」地点を最優先で探す！
+      if (lastFinishedOrder > 0) {
+        const futureUndone = currentCourse.items.filter(i => {
+          const itemOrder = (i.order !== undefined && i.order !== null) ? Number(i.order) : Number(i.id);
+          return !i.isDone && itemOrder > lastFinishedOrder;
+        });
+        if (futureUndone.length > 0) {
+          // 例: #3 (C地点) 完了後 ➔ #4 (D地点) を優先案内！
+          return futureUndone[0];
+        }
+      }
+
+      // 2. 後ろの順番がすべて完了している場合は、飛ばして残っている未配達（前の順番）を探す
+      const allUndone = currentCourse.items.filter(i => !i.isDone);
+      if (allUndone.length > 0) {
+        return allUndone[0];
+      }
+
+      return null;
+    }
+
     // --- 2. 次の行き先を選択するプロンプト表示 ---
     function promptNextDestinationSelection(isFirst = false) {
       updateNavStats();
-      const undoneItems = currentCourse.items.filter(i => !i.isDone);
+      const nextDefault = getNextRecommendedTarget();
       const modalCard = document.getElementById('modalCardBody');
 
-      if (undoneItems.length === 0) {
+      if (!nextDefault) {
         document.getElementById('transit-target-card').style.display = 'none';
         document.getElementById('select-next-modal').style.display = 'flex';
         modalCard.innerHTML = `
@@ -935,7 +969,6 @@
         return;
       }
 
-      const nextDefault = undoneItems[0];
       modalCard.innerHTML = `
         <div class="modal-headline">${isFirst ? "【1件目の配送先を選択】" : "【次の配送先を選択】"}</div>
         <div class="modal-target-title">#${nextDefault.order || nextDefault.id} ${nextDefault.name} 様</div>
@@ -955,6 +988,7 @@
 
     window.resetCurrentCourseAndRestart = function() {
       if (!confirm("すべての配達先を未配達に戻して最初からやり直しますか？")) return;
+      lastFinishedOrder = 0;
       currentCourse.items.forEach(i => i.isDone = false);
       const courses = getCourses();
       const idx = courses.findIndex(c => c.id === currentCourse.id);
@@ -966,9 +1000,9 @@
     };
 
     window.chooseNextSequentialTarget = function() {
-      const undoneItems = currentCourse.items.filter(i => !i.isDone);
-      if (undoneItems.length === 0) return;
-      setTargetAndBeginTransit(undoneItems[0]);
+      const nextDefault = getNextRecommendedTarget();
+      if (!nextDefault) return;
+      setTargetAndBeginTransit(nextDefault);
     };
 
     window.openAllDestinationsModal = function() {
@@ -1038,6 +1072,7 @@
     // --- 3. 配送先を確定して移動・ナビ開始 ---
     window.setTargetAndBeginTransit = function(item) {
       currentTargetItem = item;
+      lastFinishedOrder = (item.order !== undefined && item.order !== null) ? Number(item.order) : Number(item.id);
       saveActiveSessionState();
       document.getElementById('select-next-modal').style.display = 'none';
       document.getElementById('all-destinations-modal').style.display = 'none';
@@ -1378,6 +1413,7 @@
       if (!currentTargetItem) return;
 
       currentTargetItem.isDone = true;
+      lastFinishedOrder = (currentTargetItem.order !== undefined && currentTargetItem.order !== null) ? Number(currentTargetItem.order) : Number(currentTargetItem.id);
       lastArrivedCoords = { lat: currentTargetItem.lat, lng: currentTargetItem.lng };
 
       const courses = getCourses();

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lively-navi-v25-force-dom-clean';
+const CACHE_NAME = 'lively-navi-v26-smart-sequential-routing';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
