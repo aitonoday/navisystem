@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lively-navi-v32-admin-red-dashed-gps-log';
+const CACHE_NAME = 'lively-navi-v34-round-dotted-tracks';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();

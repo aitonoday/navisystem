@@ -741,10 +741,10 @@
     // キャッシュ互換性用（古いキャッシュが残っている端末でのエラーを100%防止）
     window.hookMapTouchRotation = function() {};
 
-    // --- Service Worker 強制更新 (v31) ---
+    // --- Service Worker 強制更新 (v34) ---
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=31').then((reg) => {
+        navigator.serviceWorker.register('sw.js?v=34').then((reg) => {
           reg.update();
         }).catch(err => console.log('SW registration failed:', err));
       });
@@ -1322,12 +1322,12 @@
 
       if (points && points.length > 0) {
         const latlngs = points.map(p => [p.lat, p.lng]);
-        // 登録されている過去の軌跡情報を「赤い点線」で表示
+        // 🔴 登録されている過去の軌跡情報を「赤色の丸ドット点線」で表示
         registeredLegPolyline = L.polyline(latlngs, {
           color: '#ef4444',
-          weight: 5,
+          weight: 7,
           opacity: 0.95,
-          dashArray: '6, 8',
+          dashArray: '0, 16',
           lineCap: 'round',
           lineJoin: 'round'
         }).addTo(map);
@@ -1837,13 +1837,14 @@
       recordedLogs = [];
 
       if (gpsPolyline) map.removeLayer(gpsPolyline);
-      // 🟡 通った軌跡は「薄い黄色の点線」で表示
+      // 🟡 通った軌跡は「薄い黄色の丸ドット点線」で表示
       gpsPolyline = L.polyline([], {
         color: '#eab308',
-        weight: 4,
-        opacity: 0.85,
-        dashArray: '6, 8',
-        lineCap: 'round'
+        weight: 6,
+        opacity: 0.9,
+        dashArray: '0, 14',
+        lineCap: 'round',
+        lineJoin: 'round'
       }).addTo(map);
 
       gpsWatchId = navigator.geolocation.watchPosition((pos) => {
