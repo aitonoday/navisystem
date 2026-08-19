@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lively-navi-v37-default-off-instant-on-routing';
+const CACHE_NAME = 'lively-navi-v38-guaranteed-leg-tracks-and-off-route-start';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();

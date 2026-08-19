@@ -396,29 +396,54 @@ async function saveLegTrackByCodes(fromCode, toCode, points) {
   }
 }
 
-async function fetchLegTrackByCodes(fromCode, toCode) {
-  if (!fromCode || !toCode) return [];
-  const key = `${String(fromCode).trim()}_to_${String(toCode).trim()}`;
-  try {
-    const res = await fetch(`${CLOUD_RTDB_BASE}/leg_tracks/${encodeURIComponent(key)}.json?t=${Date.now()}`);
-    if (res.ok) {
-      const data = await res.json();
-      if (data && Array.isArray(data)) return data;
-      if (data && typeof data === 'object') return Object.values(data);
-    }
-  } catch (e) {}
+async function fetchLegTrackByCodes(fromCode, toCode, fromOrder = null, toOrder = null, courseId = null) {
+  const candidateKeys = [];
 
-  // 旧フォーマット(/logs/{courseId}/legs)からのフォールバック検索
+  if (fromCode && toCode) {
+    candidateKeys.push(`${String(fromCode).trim()}_to_${String(toCode).trim()}`);
+  }
+  if (fromOrder !== null && toOrder !== null) {
+    candidateKeys.push(`leg_${fromOrder}_to_${toOrder}`);
+    candidateKeys.push(`ORDER_${fromOrder}_to_ORDER_${toOrder}`);
+    if (toCode) candidateKeys.push(`ORDER_${fromOrder}_to_${String(toCode).trim()}`);
+  }
+  if (toCode) {
+    candidateKeys.push(`DEPOT_50_to_${String(toCode).trim()}`);
+    candidateKeys.push(`DEPOT_10_to_${String(toCode).trim()}`);
+    candidateKeys.push(`DEPOT_20_to_${String(toCode).trim()}`);
+    candidateKeys.push(`DEPOT_30_to_${String(toCode).trim()}`);
+  }
+
+  // 1. /leg_tracks/{key}.json から候補キーを順次検索
+  for (const key of candidateKeys) {
+    try {
+      const res = await fetch(`${CLOUD_RTDB_BASE}/leg_tracks/${encodeURIComponent(key)}.json?t=${Date.now()}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data && Array.isArray(data) && data.length > 0) return data;
+        if (data && typeof data === 'object') {
+          const pts = Object.values(data);
+          if (pts.length > 0) return pts;
+        }
+      }
+    } catch (e) {}
+  }
+
+  // 2. /logs/{courseId}/legs/{key}.json から候補キーを検索
   try {
     const allRes = await fetch(`${CLOUD_RTDB_BASE}/logs.json?t=${Date.now()}`);
     if (allRes.ok) {
       const allLogs = await allRes.json();
-      if (allLogs) {
+      if (allLogs && typeof allLogs === 'object') {
         for (const cid of Object.keys(allLogs)) {
           const l = allLogs[cid];
-          if (l && l.legs && l.legs[key]) {
-            const pts = Array.isArray(l.legs[key]) ? l.legs[key] : Object.values(l.legs[key]);
-            if (pts.length > 0) return pts;
+          if (l && l.legs) {
+            for (const key of candidateKeys) {
+              if (l.legs[key]) {
+                const pts = Array.isArray(l.legs[key]) ? l.legs[key] : Object.values(l.legs[key]);
+                if (pts.length > 0) return pts;
+              }
+            }
           }
         }
       }

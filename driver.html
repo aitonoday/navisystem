@@ -773,10 +773,10 @@
     // キャッシュ互換性用（古いキャッシュが残っている端末でのエラーを100%防止）
     window.hookMapTouchRotation = function() {};
 
-    // --- Service Worker 強制更新 (v37) ---
+    // --- Service Worker 強制更新 (v38) ---
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=37').then((reg) => {
+        navigator.serviceWorker.register('sw.js?v=38').then((reg) => {
           reg.update();
         }).catch(err => console.log('SW registration failed:', err));
       });
@@ -818,7 +818,7 @@
     let registeredLegPolyline = null; // 登録済み区間軌跡（赤色の丸ドット点線）
     let currentLegFromOrder = 0; // 今回の区間の出発地点オーダー番号
     let currentLegFromCode = 'DEPOT_50'; // 今回の区間の出発地点顧客コード
-    let isRouteLineVisible = localStorage.getItem('lively_navi_route_line_visible') === 'true'; // デフォルト OFF (false)
+    let isRouteLineVisible = false; // 起動時は常に完全 OFF
 
     let userCarMarker = null;
     let currentUserCoords = null;
@@ -828,11 +828,10 @@
     let gpsWatchId = null;
     let recordedLogs = [];
     let currentLegLogs = [];
-    let gpsPolyline = null; // 今回通った軌跡（薄い黄色の点線）
+    let gpsPolyline = null; // 今回通った軌跡（薄い黄色の丸ドット点線）
 
     window.toggleRouteLineVisibility = function() {
       isRouteLineVisible = !isRouteLineVisible;
-      localStorage.setItem('lively_navi_route_line_visible', isRouteLineVisible ? 'true' : 'false');
       updateRouteLineBtnUi();
 
       if (!isRouteLineVisible) {
@@ -1105,6 +1104,10 @@
         document.getElementById('view-course-select').style.display = 'none';
         document.getElementById('view-nav-main').style.display = 'flex';
 
+        // 🛣️ 配送開始時は常に「ルート案内: OFF」からスタート
+        isRouteLineVisible = false;
+        updateRouteLineBtnUi();
+
         initMap();
         startContinuousGpsTracking();
         promptNextDestinationSelection(true);
@@ -1335,25 +1338,24 @@
       currentLegLogs = [];
       plotMarkers();
 
-      // 🔴 顧客コード主キー（fromCode ➔ toCode）で登録軌跡（赤色の丸ドット点線）を取得・描画
-      const toCode = item.code || `ORDER_${targetOrder}`;
-      loadAndDrawRegisteredLeg(currentLegFromCode, toCode);
+      // 🔴 登録軌跡（赤色の丸ドット点線）を取得・描画
+      const toCode = item.code || '';
+      loadAndDrawRegisteredLeg(currentLegFromCode, toCode, currentLegFromOrder, targetOrder, currentCourse ? currentCourse.id : null);
 
       checkProximityToTarget();
       calculateTransitRoute(item);
     };
 
-    // 🔴 該当区間（顧客コードA ➔ 顧客コードB）の登録軌跡（赤色の丸ドット点線）の取得・描画
-    async function loadAndDrawRegisteredLeg(fromCode, toCode) {
+    // 🔴 該当区間の登録軌跡（赤色の丸ドット点線）の取得・描画
+    async function loadAndDrawRegisteredLeg(fromCode, toCode, fromOrder = null, toOrder = null, courseId = null) {
       if (registeredLegPolyline && map) {
         map.removeLayer(registeredLegPolyline);
         registeredLegPolyline = null;
       }
-      if (!fromCode || !toCode) return;
 
       let points = [];
       if (window.fetchLegTrackByCodes) {
-        points = await fetchLegTrackByCodes(fromCode, toCode);
+        points = await fetchLegTrackByCodes(fromCode, toCode, fromOrder, toOrder, courseId);
       }
 
       if (points && points.length > 0) {
@@ -1367,7 +1369,9 @@
           lineCap: 'round',
           lineJoin: 'round'
         }).addTo(map);
-        console.log(`✅ Loaded leg track for [${fromCode} -> ${toCode}]: ${points.length} pts`);
+        console.log(`✅ Loaded leg track for [${fromCode} (${fromOrder}) -> ${toCode} (${toOrder})]: ${points.length} pts`);
+      } else {
+        console.log(`ℹ️ No registered leg track found for [${fromCode} (${fromOrder}) -> ${toCode} (${toOrder})]`);
       }
     }
 
