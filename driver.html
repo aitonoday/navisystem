@@ -327,6 +327,38 @@
     .hud-address-row-portrait { display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #cbd5e1; margin-bottom: 6px; gap: 8px; }
     .hud-actions-row { display: flex; gap: 6px; align-items: center; margin-bottom: 0; }
 
+    /* 🔍 地図拡大縮小 (+/-) ボタンを画面右端・中央に配置 */
+    .leaflet-control-zoom {
+      position: fixed !important;
+      right: 12px !important;
+      top: 50% !important;
+      transform: translateY(-50%) !important;
+      margin: 0 !important;
+      z-index: 1000 !important;
+      border: 1.5px solid #cbd5e1 !important;
+      border-radius: 12px !important;
+      overflow: hidden !important;
+      box-shadow: 0 4px 16px rgba(15, 23, 42, 0.2) !important;
+    }
+    .leaflet-control-zoom a {
+      width: 40px !important;
+      height: 40px !important;
+      line-height: 40px !important;
+      font-size: 22px !important;
+      font-weight: 800 !important;
+      color: #0f172a !important;
+      background: #ffffff !important;
+      text-align: center !important;
+      display: block !important;
+    }
+    .leaflet-control-zoom a:first-child {
+      border-bottom: 1px solid #e2e8f0 !important;
+    }
+    .leaflet-control-zoom a:hover, .leaflet-control-zoom a:active {
+      background: #f1f5f9 !important;
+      color: #0d9488 !important;
+    }
+
     /* 📱 横向き（Landscape）最適化：超スリムな完全1段（1行）レイアウト */
     @media (orientation: landscape) {
       #nav-header {
@@ -741,10 +773,10 @@
     // キャッシュ互換性用（古いキャッシュが残っている端末でのエラーを100%防止）
     window.hookMapTouchRotation = function() {};
 
-    // --- Service Worker 強制更新 (v35) ---
+    // --- Service Worker 強制更新 (v36) ---
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=35').then((reg) => {
+        navigator.serviceWorker.register('sw.js?v=36').then((reg) => {
           reg.update();
         }).catch(err => console.log('SW registration failed:', err));
       });

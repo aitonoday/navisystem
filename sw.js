@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lively-navi-v35-security-customer-code-key';
+const CACHE_NAME = 'lively-navi-v36-right-center-zoom-controls';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
