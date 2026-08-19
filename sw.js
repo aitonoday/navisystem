@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lively-navi-v29-yellow-gps-red-leg-tracks';
+const CACHE_NAME = 'lively-navi-v30-split-arrival-buttons';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();

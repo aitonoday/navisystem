@@ -575,15 +575,18 @@
             <span id="proximityStatusBadge" style="display:none;">案内中</span>
           </div>
 
-          <!-- 3段目（縦向き時） / 2段目（横向き時）: 3ボタン横並び（到着・Gマップ・変更） -->
-          <div class="hud-actions-row">
-            <button class="btn btn-green" id="mainArrivalButton" style="flex:1; padding:9px 4px; font-size:13px; font-weight:900;" onclick="onArrivalClick()">
+          <!-- 3段目（縦向き時） / 2段目（横向き時）: 登録到着・到着・Gマップ・変更 -->
+          <div class="hud-actions-row" style="display:flex; gap:6px;">
+            <button class="btn btn-green" id="btnRegisterArrival" style="flex:1.2; padding:9px 4px; font-size:12px; font-weight:900; background:linear-gradient(135deg, #059669, #10b981); border:none; box-shadow:0 3px 8px rgba(16,185,129,0.35);" onclick="onArrivalClick(true)">
+              ⭐ 登録到着
+            </button>
+            <button class="btn btn-blue" id="btnNormalArrival" style="flex:1; padding:9px 4px; font-size:12px; font-weight:800; background:#0284c7;" onclick="onArrivalClick(false)">
               📍 到着
             </button>
-            <button class="btn btn-blue" style="flex:1; padding:9px 4px; font-size:13px; font-weight:700;" onclick="openExternalGoogleMap()">
+            <button class="btn btn-slate" style="flex:0.8; padding:9px 4px; font-size:11px; font-weight:700; background:rgba(255,255,255,0.1); border-color:rgba(255,255,255,0.2);" onclick="openExternalGoogleMap()">
               🗺️ Gマップ
             </button>
-            <button class="btn btn-slate" style="flex:1; padding:9px 4px; font-size:13px; font-weight:700;" onclick="openChangeDestinationModal()">
+            <button class="btn btn-slate" style="flex:0.7; padding:9px 4px; font-size:11px; font-weight:700; background:rgba(255,255,255,0.1); border-color:rgba(255,255,255,0.2);" onclick="openChangeDestinationModal()">
               🔄 変更
             </button>
           </div>
@@ -738,10 +741,10 @@
     // キャッシュ互換性用（古いキャッシュが残っている端末でのエラーを100%防止）
     window.hookMapTouchRotation = function() {};
 
-    // --- Service Worker 強制更新 (v29) ---
+    // --- Service Worker 強制更新 (v30) ---
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=29').then((reg) => {
+        navigator.serviceWorker.register('sw.js?v=30').then((reg) => {
           reg.update();
         }).catch(err => console.log('SW registration failed:', err));
       });
@@ -1610,8 +1613,8 @@
       }
     }
 
-    // --- 到着ボタン押下 ---
-    window.onArrivalClick = function() {
+    // --- 到着ボタン押下（isRegister: true = 軌跡ルート上書き登録, false = 通常完了のみ） ---
+    window.onArrivalClick = function(isRegister = false) {
       if (!currentTargetItem) return;
 
       currentTargetItem.isDone = true;
@@ -1629,11 +1632,15 @@
         updateItemStatusToCloud(currentCourse.id, currentTargetItem.id, true);
       }
 
-      // 今回走った区間のGPSログをクラウドへ自動保存
-      if (window.saveLegGpsLogToCloud && currentCourse && currentLegLogs.length > 0) {
-        const legKey = `leg_${currentLegFromOrder}_to_${lastFinishedOrder}`;
-        saveLegGpsLogToCloud(currentCourse.id, legKey, currentLegLogs);
+      // ⭐「登録到着」ボタンの場合のみ、今回の区間GPS走行ログをお手本として上書き保存！
+      if (isRegister) {
+        if (window.saveLegGpsLogToCloud && currentCourse && currentLegLogs.length > 0) {
+          const legKey = `leg_${currentLegFromOrder}_to_${lastFinishedOrder}`;
+          saveLegGpsLogToCloud(currentCourse.id, legKey, currentLegLogs);
+        }
       }
+      // 「通常到着」の場合は保存・上書きをスキップ（迷走や回り道などの誤登録を完全防止）
+
       currentLegFromOrder = lastFinishedOrder; // 次の出発地点オーダーを更新
 
       if (currentRouteLayer) {
@@ -1645,7 +1652,12 @@
         registeredLegPolyline = null;
       }
 
-      alert(`✅ #${currentTargetItem.order || currentTargetItem.id} ${currentTargetItem.name} 様への配達が完了しました！`);
+      const itemLabel = (currentTargetItem.order === 0) ? '🏁 起点' : (currentTargetItem.code === 'RETURN' ? '🏢 帰着' : `#${currentTargetItem.order || currentTargetItem.id} ${currentTargetItem.name} 様`);
+      const finishMsg = isRegister 
+        ? `⭐ ${itemLabel} への到着完了！\n該当区間の走行ルートをお手本軌跡として上書き登録しました。`
+        : `✅ ${itemLabel} への配達が完了しました。\n（※軌跡ルートは登録・上書きしていません）`;
+      alert(finishMsg);
+
       currentTargetItem = null;
       clearActiveSessionState();
 
