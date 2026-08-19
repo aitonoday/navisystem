@@ -1289,17 +1289,45 @@
       }
     }
 
+    // --- 4つの起点マスター（拠点データ） ---
+    const DEPOT_LOCATIONS = [
+      { id: 'depot_tawaramoto', name: '【起点】田原本拠点', address: '奈良県磯城郡田原本町味間10-1', lat: 34.5379282, lng: 135.8131707, code: '50' },
+      { id: 'depot_nara', name: '【起点】奈良拠点', address: '奈良県奈良市七条東町4-21', lat: 34.6626997, lng: 135.7864145, code: '10' },
+      { id: 'depot_oji', name: '【起点】王寺拠点', address: '奈良県北葛城郡王寺町畠田8丁目1750-1', lat: 34.5784301, lng: 135.7038646, code: '20' },
+      { id: 'depot_ikoma', name: '【起点】生駒拠点', address: '奈良県生駒市東生駒1丁目307', lat: 34.6920197, lng: 135.7097433, code: '30' }
+    ];
+
     function updateRouteDropdowns() {
       const selA = document.getElementById('startPointSelect');
       const selB = document.getElementById('endPointSelect');
       selA.innerHTML = '<option value="">出発地点 (A) を選択</option>';
       selB.innerHTML = '<option value="">到着地点 (B) を選択</option>';
 
+      // 4つの起点をグループ化して先頭に追加
+      const depotGroupA = document.createElement('optgroup');
+      depotGroupA.label = "🏢 出発・帰還拠点（起点）";
+      const depotGroupB = document.createElement('optgroup');
+      depotGroupB.label = "🏢 出発・帰還拠点（起点）";
+
+      DEPOT_LOCATIONS.forEach(depot => {
+        depotGroupA.innerHTML += `<option value="${depot.id}">🏢 ${depot.name} (${depot.address})</option>`;
+        depotGroupB.innerHTML += `<option value="${depot.id}">🏢 ${depot.name} (${depot.address})</option>`;
+      });
+      selA.appendChild(depotGroupA);
+      selB.appendChild(depotGroupB);
+
+      const destGroupA = document.createElement('optgroup');
+      destGroupA.label = "📦 配達先一覧";
+      const destGroupB = document.createElement('optgroup');
+      destGroupB.label = "📦 配達先一覧";
+
       activeLoadedItems.forEach(item => {
         const label = `#${item.order || item.id} ${item.name} (${item.address.substring(0, 8)}...)`;
-        selA.innerHTML += `<option value="${item.id}">${label}</option>`;
-        selB.innerHTML += `<option value="${item.id}">${label}</option>`;
+        destGroupA.innerHTML += `<option value="${item.id}">${label}</option>`;
+        destGroupB.innerHTML += `<option value="${item.id}">${label}</option>`;
       });
+      selA.appendChild(destGroupA);
+      selB.appendChild(destGroupB);
     }
 
     window.calculateAndDrawRoute = async function() {
@@ -1308,8 +1336,10 @@
       if (!idA || !idB) return alert("出発地点(A)と到着地点(B)の両方を選択してください。");
       if (idA === idB) return alert("異なる地点を選択してください。");
 
-      const itemA = activeLoadedItems.find(i => i.id == idA);
-      const itemB = activeLoadedItems.find(i => i.id == idB);
+      let itemA = DEPOT_LOCATIONS.find(d => d.id === idA) || activeLoadedItems.find(i => String(i.id) === String(idA));
+      let itemB = DEPOT_LOCATIONS.find(d => d.id === idB) || activeLoadedItems.find(i => String(i.id) === String(idB));
+
+      if (!itemA || !itemB) return alert("地点情報が見つかりませんでした。");
 
       const url = `https://router.project-osrm.org/route/v1/driving/${itemA.lng},${itemA.lat};${itemB.lng},${itemB.lat}?overview=full&geometries=geojson`;
       try {

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lively-navi-v26-smart-sequential-routing';
+const CACHE_NAME = 'lively-navi-v27-depot-start-return-routes';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();

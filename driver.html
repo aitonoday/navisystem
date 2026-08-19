@@ -699,6 +699,27 @@
         <div class="dest-list-scroll" id="destListContainer"></div>
       </div>
 
+      <!-- ================= 起点（出発・帰還拠点）選択モーダル ================= -->
+      <div id="depot-select-modal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(15,23,42,0.6); z-index:99999; align-items:center; justify-content:center; backdrop-filter:blur(6px); padding:16px;">
+        <div style="background:#ffffff; border-radius:24px; padding:22px; max-width:440px; width:100%; box-shadow:0 25px 60px rgba(0,0,0,0.3); max-height:90vh; display:flex; flex-direction:column;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid #f1f5f9; padding-bottom:10px;">
+            <div>
+              <b style="font-size:17px; color:#0f172a; font-weight:900; display:flex; align-items:center; gap:6px;">🏢 出発・帰還拠点（起点）の選択</b>
+              <span style="font-size:12px; color:#64748b; display:block; margin-top:2px;">起点から1件目、最終件から起点へのルートを案内します</span>
+            </div>
+            <button class="btn btn-white" style="padding:4px 10px; font-size:12px;" onclick="closeDepotSelectModal()">✕</button>
+          </div>
+
+          <div id="depotOptionsContainer" style="display:flex; flex-direction:column; gap:8px; overflow-y:auto; padding:4px 0; margin-bottom:16px;">
+            <!-- 4拠点動的生成 -->
+          </div>
+
+          <button id="confirmDepotStartBtn" class="btn btn-primary" style="width:100%; padding:14px; font-size:15px; font-weight:900; justify-content:center; box-shadow:0 4px 14px rgba(13,148,136,0.35);" onclick="confirmDepotAndStart()">
+            🚀 この起点から出発して配送開始
+          </button>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -714,14 +735,24 @@
     // キャッシュ互換性用（古いキャッシュが残っている端末でのエラーを100%防止）
     window.hookMapTouchRotation = function() {};
 
-    // --- Service Worker 強制更新 (v26) ---
+    // --- Service Worker 強制更新 (v27) ---
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=26').then((reg) => {
+        navigator.serviceWorker.register('sw.js?v=27').then((reg) => {
           reg.update();
         }).catch(err => console.log('SW registration failed:', err));
       });
     }
+
+    // --- 4つの起点マスター（拠点データ） ---
+    const DEPOT_LOCATIONS = [
+      { id: 'tawaramoto', name: '田原本拠点', address: '奈良県磯城郡田原本町味間10-1', lat: 34.5379282, lng: 135.8131707, code: '50' },
+      { id: 'nara', name: '奈良拠点', address: '奈良県奈良市七条東町4-21', lat: 34.6626997, lng: 135.7864145, code: '10' },
+      { id: 'oji', name: '王寺拠点', address: '奈良県北葛城郡王寺町畠田8丁目1750-1', lat: 34.5784301, lng: 135.7038646, code: '20' },
+      { id: 'ikoma', name: '生駒拠点', address: '奈良県生駒市東生駒1丁目307', lat: 34.6920197, lng: 135.7097433, code: '30' }
+    ];
+    let selectedDepot = DEPOT_LOCATIONS[0];
+    let pendingStartCourseId = null;
 
     // キャッシュクリア＆強制リロード関数
     window.forceClearCacheAndReload = async function() {
@@ -760,40 +791,28 @@
     // --- コースデータ取得（週次配達表フォーマット基準） ---
     const SAMPLE_COURSES = [
       {
-        id: 'course_505001_20260817',
-        name: '【20260817週】コース 505001 (宅配御膳 田原本)',
-        memo: '週次配達表 拠点50 / コース001',
-        createdAt: new Date().toISOString(),
-        items: [
-          { id: 1, order: 1, name: "山本 様", address: "奈良県橿原市忌部町246", time: "指定なし", memo: "ピ 玄中 留守玄前", lat: 34.503200, lng: 135.772500, isDone: false },
-          { id: 2, order: 2, name: "森本 様", address: "奈良県橿原市四条町673", time: "指定なし", memo: "ポスト下 雨天時ピ玄中", lat: 34.506500, lng: 135.782000, isDone: false },
-          { id: 3, order: 3, name: "田中 様", address: "奈良県奈良市登大路町30", time: "午前中", memo: "置き配可（玄関前）", lat: 34.685062, lng: 135.832809, isDone: false },
-          { id: 4, order: 4, name: "佐藤 様", address: "奈良県生駒市北新町10-38", time: "14:00-16:00", memo: "オートロック暗証1234", lat: 34.694481, lng: 135.697067, isDone: false }
-        ]
+        id: 'sample_today',
+        name: '【20260817週】コース 50001 (50)',
+        memo: '田原本拠点発着 ルート配送',
+        items: []
       }
     ];
 
     function getCourses() {
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      const json = localStorage.getItem(STORAGE_KEY);
+      if (json) {
+        try {
+          return JSON.parse(json);
+        } catch (e) {
+          console.error("Course parse error:", e);
         }
-      } catch (e) {}
-
+      }
       return SAMPLE_COURSES;
     }
 
     function saveCourses(courses) {
-      if (!courses || courses.length === 0) return;
       localStorage.setItem(STORAGE_KEY, JSON.stringify(courses));
     }
-
-    window.loadSampleToDriver = function() {
-      saveCourses(SAMPLE_COURSES);
-      refreshCourses();
-    };
 
     // ☁️ クラウドから最新コースを強制取得して同期
     window.syncWithCloudDirect = async function() {
@@ -828,8 +847,10 @@
       }
 
       courses.forEach(course => {
-        const doneCount = course.items.filter(i => i.isDone).length;
-        const totalCount = course.items.length;
+        // 配達先実件数（起点・帰着を除く）
+        const realItems = (course.items || []).filter(i => !i.isDepot);
+        const doneCount = realItems.filter(i => i.isDone).length;
+        const totalCount = realItems.length;
         const remainingCount = totalCount - doneCount;
         const percent = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0;
         const isAllDone = (doneCount === totalCount && totalCount > 0);
@@ -850,13 +871,82 @@
               進捗: ${doneCount}/${totalCount} (${percent}%)
             </span>
           </div>
-          <button class="btn ${isAllDone ? 'btn-green' : 'btn-primary'}" style="width:100%; font-size:15px; padding:13px;" onclick="startDeliveryWorkflow('${course.id}')">
-            ${isAllDone ? '✅ 配達完了済（確認・再配送）' : `🚚 配送を開始する（残り ${remainingCount}件）`}
+          <button class="btn ${isAllDone ? 'btn-green' : 'btn-primary'}" style="width:100%; font-size:15px; padding:13px;" onclick="openDepotSelectModal('${course.id}')">
+            ${isAllDone ? '✅ 配達完了済（確認・再配送）' : `🚚 起点を選んで配送開始（残り ${remainingCount}件）`}
           </button>
         `;
         container.appendChild(card);
       });
     }
+
+    // --- 起点（出発・帰還拠点）選択モーダルの処理 ---
+    window.openDepotSelectModal = function(courseId) {
+      pendingStartCourseId = courseId;
+      const courses = getCourses();
+      const course = courses.find(c => c.id === courseId);
+
+      // コース名から拠点を自動推定（初期選択）
+      let defaultDepot = DEPOT_LOCATIONS[0];
+      if (course && course.name) {
+        if (course.name.includes('50') || course.name.includes('田原本')) defaultDepot = DEPOT_LOCATIONS[0];
+        else if (course.name.includes('10') || course.name.includes('奈良')) defaultDepot = DEPOT_LOCATIONS[1];
+        else if (course.name.includes('20') || course.name.includes('王寺')) defaultDepot = DEPOT_LOCATIONS[2];
+        else if (course.name.includes('30') || course.name.includes('生駒')) defaultDepot = DEPOT_LOCATIONS[3];
+      }
+      selectedDepot = defaultDepot;
+
+      renderDepotOptions();
+      document.getElementById('depot-select-modal').style.display = 'flex';
+    };
+
+    function renderDepotOptions() {
+      const container = document.getElementById('depotOptionsContainer');
+      container.innerHTML = '';
+
+      DEPOT_LOCATIONS.forEach(depot => {
+        const isSelected = selectedDepot.id === depot.id;
+        const card = document.createElement('div');
+        card.style.cssText = `
+          padding: 12px 14px;
+          border: 2px solid ${isSelected ? '#0d9488' : '#e2e8f0'};
+          background: ${isSelected ? '#f0fdfa' : '#ffffff'};
+          border-radius: 14px;
+          cursor: pointer;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          transition: all 0.2s;
+        `;
+        card.innerHTML = `
+          <div>
+            <div style="font-weight: 800; font-size: 15px; color: ${isSelected ? '#0f766e' : '#0f172a'}; display: flex; align-items: center; gap: 6px;">
+              🏢 ${depot.name} ${isSelected ? '<span style="background:#0d9488; color:#fff; font-size:10px; padding:2px 6px; border-radius:10px;">選択中</span>' : ''}
+            </div>
+            <div style="font-size: 12px; color: #64748b; margin-top: 3px;">📍 ${depot.address}</div>
+          </div>
+          <div style="font-size: 18px;">${isSelected ? '🔘' : '⚪'}</div>
+        `;
+        card.onclick = () => {
+          selectedDepot = depot;
+          renderDepotOptions();
+        };
+        container.appendChild(card);
+      });
+      document.getElementById('confirmDepotStartBtn').innerText = `🚀 ${selectedDepot.name}から出発して配送開始`;
+    }
+
+    window.closeDepotSelectModal = function() {
+      document.getElementById('depot-select-modal').style.display = 'none';
+      pendingStartCourseId = null;
+    };
+
+    window.confirmDepotAndStart = function() {
+      if (!pendingStartCourseId) return;
+      const courseId = pendingStartCourseId;
+      const depot = selectedDepot;
+      closeDepotSelectModal();
+      startDeliveryWorkflow(courseId, depot);
+    };
 
     window.resetCourseStatus = function(courseId, event) {
       if (event) event.stopPropagation();
@@ -872,7 +962,7 @@
     };
 
     // --- 1. 配送開始（コース起動） ---
-    window.startDeliveryWorkflow = function(courseId) {
+    window.startDeliveryWorkflow = function(courseId, depot = selectedDepot) {
       try {
         const courses = getCourses();
         currentCourse = courses.find(c => c.id === courseId);
@@ -890,7 +980,40 @@
           });
         }
 
-        currentCourse.items.sort((a, b) => (a.order || a.id) - (b.order || b.id));
+        // 起点・帰着アイテムをコースへ確実に統合
+        const realItems = currentCourse.items.filter(i => !i.isDepot);
+        realItems.forEach((it, idx) => {
+          it.order = idx + 1; // 1件目〜N件目
+        });
+
+        const startDepotItem = {
+          id: 'depot_start_' + depot.id,
+          order: 0,
+          code: 'START',
+          name: `【起点】${depot.name}`,
+          address: depot.address,
+          lat: depot.lat,
+          lng: depot.lng,
+          isDone: true, // 出発時は完了扱い
+          isDepot: true,
+          memo: '出発拠点'
+        };
+
+        const returnDepotItem = {
+          id: 'depot_return_' + depot.id,
+          order: realItems.length + 1,
+          code: 'RETURN',
+          name: `【帰着】${depot.name}`,
+          address: depot.address,
+          lat: depot.lat,
+          lng: depot.lng,
+          isDone: false, // 最終配達後に案内
+          isDepot: true,
+          memo: '最終帰還拠点'
+        };
+
+        currentCourse.items = [startDepotItem, ...realItems, returnDepotItem];
+        currentCourse.depot = depot;
 
         // 完了済み地点から lastFinishedOrder を自動算出
         const doneItems = currentCourse.items.filter(i => i.isDone);
@@ -1504,6 +1627,16 @@
           `;
           iconSize = [40, 50];
           iconAnchor = [20, 25];
+        } else if (item.code === 'START' || item.order === 0) {
+          // 🏁 出発起点
+          iconHtml = `<div class="dest-pin-badge" style="background:#10b981; border-color:#059669;">🏁</div>`;
+          iconSize = [30, 30];
+          iconAnchor = [15, 15];
+        } else if (item.code === 'RETURN') {
+          // 🏢 帰還拠点
+          iconHtml = `<div class="dest-pin-badge" style="background:#0284c7; border-color:#0369a1;">🏢</div>`;
+          iconSize = [30, 30];
+          iconAnchor = [15, 15];
         } else if (item.isDone) {
           // 配達完了: 緑の✔バッジ
           iconHtml = `<div class="dest-pin-badge done">✔</div>`;
@@ -1525,16 +1658,18 @@
 
         const marker = L.marker([item.lat, item.lng], {
           icon: customIcon,
-          zIndexOffset: isTarget ? 2000 : 500
+          zIndexOffset: isTarget ? 2000 : (item.isDepot ? 1500 : 500)
         }).addTo(map);
+
+        const titleText = (item.order === 0) ? `🏁 ${item.name}` : (item.code === 'RETURN' ? `🏢 ${item.name}` : `#${item.order || item.id} ${item.name} 様`);
 
         marker.bindPopup(`
           <div style="min-width:170px; font-size:12px; font-family:'Noto Sans JP',sans-serif;">
-            <b style="font-size:14px; color:#0f172a;">#${item.order || item.id} ${item.name} 様</b><br>
+            <b style="font-size:14px; color:#0f172a;">${titleText}</b><br>
             <span style="color:#64748b;">${item.address}</span><br>
             ${item.memo ? `<span style="color:#d97706; font-weight:600;">📝 ${item.memo}</span><br>` : ''}
             <div style="margin-top:8px;">
-              <button class="btn btn-primary" style="width:100%; padding:6px; font-size:11px;" onclick="setTargetAndBeginTransitDirect(${item.id})">
+              <button class="btn btn-primary" style="width:100%; padding:6px; font-size:11px;" onclick="setTargetAndBeginTransitDirect('${item.id}')">
                 🚚 ここへ向かう
               </button>
             </div>
@@ -1546,7 +1681,7 @@
     }
 
     window.setTargetAndBeginTransitDirect = function(id) {
-      const item = currentCourse.items.find(i => i.id === id);
+      const item = currentCourse.items.find(i => String(i.id) === String(id));
       if (item) {
         map.closePopup();
         setTargetAndBeginTransit(item);
