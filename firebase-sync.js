@@ -460,3 +460,14 @@ document.addEventListener('DOMContentLoaded', () => {
   initFirebaseApp(saved);
   subscribeLocationCorrections();
 });
+
+// グローバル公開（明示的エクスポート）
+if (typeof window !== 'undefined') {
+  window.fetchGpsLogFromCloud = fetchGpsLogFromCloud;
+  window.saveLegGpsLogToCloud = saveLegGpsLogToCloud;
+  window.fetchLegGpsLogFromCloud = fetchLegGpsLogFromCloud;
+  window.deleteCourseFromCloud = deleteCourseFromCloud;
+  window.fetchCoursesFromCloudDirect = fetchCoursesFromCloudDirect;
+  window.saveLocationCorrection = saveLocationCorrection;
+  window.findCorrectedCoords = findCorrectedCoords;
+}

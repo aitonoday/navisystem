@@ -14,7 +14,7 @@
   <!-- Firebase SDK (v9 compat) -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-  <script src="firebase-sync.js"></script>
+  <script src="firebase-sync.js?v=32"></script>
   <style>
     * { box-sizing: border-box; }
     body {
@@ -1145,7 +1145,34 @@
       showToast("📡 クラウドから走行ログを取得中...", "success");
 
       try {
-        const points = await fetchGpsLogFromCloud(courseId);
+        let points = [];
+        if (window.fetchGpsLogFromCloud) {
+          points = await window.fetchGpsLogFromCloud(courseId);
+        } else {
+          // 安全フォールバック (ダイレクト REST API)
+          const base = 'https://lively-navi-default-rtdb.asia-southeast1.firebasedatabase.app';
+          const res = await fetch(`${base}/logs/${courseId}/points.json?t=${Date.now()}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data) points = Object.values(data);
+          }
+          if (points.length === 0) {
+            const allRes = await fetch(`${base}/logs.json?t=${Date.now()}`);
+            if (allRes.ok) {
+              const allLogs = await allRes.json();
+              if (allLogs) {
+                Object.keys(allLogs).forEach(k => {
+                  const l = allLogs[k];
+                  if (l && l.points) {
+                    const pts = Object.values(l.points);
+                    if (pts.length > points.length) points = pts;
+                  }
+                });
+              }
+            }
+          }
+        }
+
         if (!points || points.length === 0) {
           showToast("⚠️ 走行ログがまだクラウドに見つかりません。", "error");
           return;
@@ -1156,10 +1183,12 @@
         if (gpsLogEndMarker) map.removeLayer(gpsLogEndMarker);
 
         const latlngs = points.map(p => [p.lat, p.lng]);
+        // 🔴 走行ログ軌跡を「赤色の点線」で表示
         gpsLogPolyline = L.polyline(latlngs, {
           color: '#ef4444',
-          weight: 6,
+          weight: 5,
           opacity: 0.95,
+          dashArray: '6, 8',
           lineJoin: 'round',
           lineCap: 'round'
         }).addTo(map);
@@ -1186,7 +1215,7 @@
 
         map.fitBounds(gpsLogPolyline.getBounds(), { padding: [50, 50] });
 
-        showToast(`🎉 本日の走行ログ（全 ${points.length.toLocaleString()} 地点）を赤線で地図上に描画しました！`);
+        showToast(`🎉 本日の走行ログ（全 ${points.length.toLocaleString()} 地点）を赤色の点線で描画しました！`);
       } catch (err) {
         console.error("Load GPS log error:", err);
         showToast("⚠️ 走行ログの取得中にエラーが発生しました: " + err.message, "error");
