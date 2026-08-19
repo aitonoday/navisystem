@@ -1137,20 +1137,60 @@
     }
 
     let gpsLogPolyline = null;
+    let gpsLogStartMarker = null;
+    let gpsLogEndMarker = null;
+
     window.loadAndShowGpsTrackLog = async function(courseId, event) {
       if (event) event.stopPropagation();
-      if (!window.fetchGpsLogFromCloud) return alert("Firebaseが接続されていません。");
-      const points = await fetchGpsLogFromCloud(courseId);
-      if (!points || points.length === 0) {
-        return alert("このコースの走行ログはまだありません（スマホで配送を開始すると自動蓄積されます）。");
+      showToast("📡 クラウドから走行ログを取得中...", "success");
+
+      try {
+        const points = await fetchGpsLogFromCloud(courseId);
+        if (!points || points.length === 0) {
+          showToast("⚠️ 走行ログがまだクラウドに見つかりません。", "error");
+          return;
+        }
+
+        if (gpsLogPolyline) map.removeLayer(gpsLogPolyline);
+        if (gpsLogStartMarker) map.removeLayer(gpsLogStartMarker);
+        if (gpsLogEndMarker) map.removeLayer(gpsLogEndMarker);
+
+        const latlngs = points.map(p => [p.lat, p.lng]);
+        gpsLogPolyline = L.polyline(latlngs, {
+          color: '#ef4444',
+          weight: 6,
+          opacity: 0.95,
+          lineJoin: 'round',
+          lineCap: 'round'
+        }).addTo(map);
+
+        // スタート地点マーカー
+        const startPt = points[0];
+        const startIcon = L.divIcon({
+          html: `<div style="background:#10b981; color:#fff; font-size:11px; font-weight:800; padding:3px 8px; border-radius:12px; border:2px solid #fff; box-shadow:0 3px 8px rgba(0,0,0,0.3); white-space:nowrap;">🏁 走行開始</div>`,
+          className: 'gps-log-start-pin',
+          iconSize: [70, 24],
+          iconAnchor: [35, 12]
+        });
+        gpsLogStartMarker = L.marker([startPt.lat, startPt.lng], { icon: startIcon, zIndexOffset: 2500 }).addTo(map);
+
+        // 最新・終了地点マーカー
+        const endPt = points[points.length - 1];
+        const endIcon = L.divIcon({
+          html: `<div style="background:#0284c7; color:#fff; font-size:11px; font-weight:800; padding:3px 8px; border-radius:12px; border:2px solid #fff; box-shadow:0 3px 8px rgba(0,0,0,0.3); white-space:nowrap;">🚚 最新地点</div>`,
+          className: 'gps-log-end-pin',
+          iconSize: [70, 24],
+          iconAnchor: [35, 12]
+        });
+        gpsLogEndMarker = L.marker([endPt.lat, endPt.lng], { icon: endIcon, zIndexOffset: 2600 }).addTo(map);
+
+        map.fitBounds(gpsLogPolyline.getBounds(), { padding: [50, 50] });
+
+        showToast(`🎉 本日の走行ログ（全 ${points.length.toLocaleString()} 地点）を赤線で地図上に描画しました！`);
+      } catch (err) {
+        console.error("Load GPS log error:", err);
+        showToast("⚠️ 走行ログの取得中にエラーが発生しました: " + err.message, "error");
       }
-
-      if (gpsLogPolyline) map.removeLayer(gpsLogPolyline);
-      const latlngs = points.map(p => [p.lat, p.lng]);
-      gpsLogPolyline = L.polyline(latlngs, { color: '#ef4444', weight: 6, opacity: 0.9 }).addTo(map);
-      map.fitBounds(gpsLogPolyline.getBounds(), { padding: [40, 40] });
-
-      alert(`✅ スマホから記録された走行ログ（全 ${points.length} 地点）を赤線で地図上に描画しました！`);
     };
 
     window.deleteCourse = async function(courseId, event) {

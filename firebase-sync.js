@@ -363,31 +363,42 @@ async function appendGpsLogToCloud(courseId, point) {
 }
 
 async function fetchGpsLogFromCloud(courseId) {
-  // 1. ダイレクト REST API (GET)
+  // 1. ダイレクト REST API (GET) - 指定courseIdを検索
   try {
     const res = await fetch(`${CLOUD_RTDB_BASE}/logs/${courseId}/points.json?t=${Date.now()}`);
     if (res.ok) {
       const data = await res.json();
       if (data && typeof data === 'object') {
         const points = Object.values(data);
-        if (points.length > 0) {
-          return points;
-        }
+        if (points.length > 0) return points;
       }
     }
   } catch (e) {}
 
-  // 2. Firebase SDK fallback
-  if (!firebaseDb) initFirebaseApp(getSavedFirebaseConfig());
-  if (firebaseDb) {
-    try {
-      const snapshot = await firebaseDb.ref(`logs/${courseId}/points`).once('value');
-      const data = snapshot.val();
-      if (data) {
-        return Object.values(data);
+  // 2. 指定IDで見つからない場合、クラウド上の全ログから最新・最大のログを自動検索
+  try {
+    const allRes = await fetch(`${CLOUD_RTDB_BASE}/logs.json?t=${Date.now()}`);
+    if (allRes.ok) {
+      const allLogs = await allRes.json();
+      if (allLogs && typeof allLogs === 'object') {
+        let bestPoints = [];
+        Object.keys(allLogs).forEach(k => {
+          const l = allLogs[k];
+          if (l && l.points) {
+            const pts = Object.values(l.points);
+            if (pts.length > bestPoints.length) {
+              bestPoints = pts;
+            }
+          }
+        });
+        if (bestPoints.length > 0) {
+          console.log(`✅ Fallback found ${bestPoints.length} GPS points from cloud logs`);
+          return bestPoints;
+        }
       }
-    } catch (err) {}
-  }
+    }
+  } catch (e2) {}
+
   return [];
 }
 
