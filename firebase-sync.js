@@ -399,6 +399,58 @@ async function fetchGpsLogFromCloud(courseId) {
     }
   } catch (e2) {}
 
+// --- 5. 区間（A➔B）ごとの登録軌跡ログ（お手本ルート）の保存と取得 ---
+
+async function saveLegGpsLogToCloud(courseId, legKey, points) {
+  if (!courseId || !legKey || !points || points.length === 0) return false;
+  try {
+    // 1. ダイレクト REST API (PUT)
+    await fetch(`${CLOUD_RTDB_BASE}/logs/${courseId}/legs/${legKey}.json`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(points)
+    });
+    console.log(`✅ Saved ${points.length} GPS points for leg ${legKey} to cloud`);
+    return true;
+  } catch (e) {
+    console.warn("saveLegGpsLog error:", e);
+    return false;
+  }
+}
+
+async function fetchLegGpsLogFromCloud(courseId, legKey) {
+  if (!courseId || !legKey) return [];
+  try {
+    // 1. ダイレクト REST API (GET)
+    const res = await fetch(`${CLOUD_RTDB_BASE}/logs/${courseId}/legs/${legKey}.json?t=${Date.now()}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data && Array.isArray(data) && data.length > 0) {
+        return data;
+      } else if (data && typeof data === 'object') {
+        const list = Object.values(data);
+        if (list.length > 0) return list;
+      }
+    }
+  } catch (e) {}
+
+  // 2. 指定IDで見つからない場合、全ログ内の legs を検索
+  try {
+    const allRes = await fetch(`${CLOUD_RTDB_BASE}/logs.json?t=${Date.now()}`);
+    if (allRes.ok) {
+      const allLogs = await allRes.json();
+      if (allLogs && typeof allLogs === 'object') {
+        for (const cid of Object.keys(allLogs)) {
+          const l = allLogs[cid];
+          if (l && l.legs && l.legs[legKey]) {
+            const pts = Array.isArray(l.legs[legKey]) ? l.legs[legKey] : Object.values(l.legs[legKey]);
+            if (pts.length > 0) return pts;
+          }
+        }
+      }
+    }
+  } catch (e2) {}
+
   return [];
 }
 

@@ -738,10 +738,10 @@
     // キャッシュ互換性用（古いキャッシュが残っている端末でのエラーを100%防止）
     window.hookMapTouchRotation = function() {};
 
-    // --- Service Worker 強制更新 (v28) ---
+    // --- Service Worker 強制更新 (v29) ---
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=28').then((reg) => {
+        navigator.serviceWorker.register('sw.js?v=29').then((reg) => {
           reg.update();
         }).catch(err => console.log('SW registration failed:', err));
       });
@@ -780,6 +780,8 @@
     let map = null;
     let markers = [];
     let currentRouteLayer = null;
+    let registeredLegPolyline = null; // 登録済み区間軌跡（赤い点線）
+    let currentLegFromOrder = 0; // 今回の区間の出発地点オーダー番号
     let isRouteLineVisible = localStorage.getItem('lively_navi_route_line_visible') !== 'false'; // デフォルトON
 
     let userCarMarker = null;
@@ -790,7 +792,7 @@
     let gpsWatchId = null;
     let recordedLogs = [];
     let currentLegLogs = [];
-    let gpsPolyline = null;
+    let gpsPolyline = null; // 今回通った軌跡（薄い黄色の点線）
 
     window.toggleRouteLineVisibility = function() {
       isRouteLineVisible = !isRouteLineVisible;
@@ -1232,7 +1234,7 @@
     // --- 3. 配送先を確定して移動・ナビ開始 ---
     window.setTargetAndBeginTransit = function(item) {
       currentTargetItem = item;
-      lastFinishedOrder = (item.order !== undefined && item.order !== null) ? Number(item.order) : Number(item.id);
+      const targetOrder = (item.order !== undefined && item.order !== null) ? Number(item.order) : Number(item.id);
       saveActiveSessionState();
       document.getElementById('select-next-modal').style.display = 'none';
       document.getElementById('all-destinations-modal').style.display = 'none';
@@ -1257,9 +1259,41 @@
       currentLegLogs = [];
       plotMarkers();
 
+      // 🔴 A地点からB地点の区間登録軌跡（赤い点線）を取得・描画
+      loadAndDrawRegisteredLeg(currentCourse.id, currentLegFromOrder, targetOrder);
+
       checkProximityToTarget();
       calculateTransitRoute(item);
     };
+
+    // 🔴 該当区間（A➔B）の登録軌跡（赤い点線）の取得・描画
+    async function loadAndDrawRegisteredLeg(courseId, fromOrder, toOrder) {
+      if (registeredLegPolyline && map) {
+        map.removeLayer(registeredLegPolyline);
+        registeredLegPolyline = null;
+      }
+      if (!courseId || toOrder === undefined || toOrder === null) return;
+
+      const legKey = `leg_${fromOrder}_to_${toOrder}`;
+
+      let points = [];
+      if (window.fetchLegGpsLogFromCloud) {
+        points = await fetchLegGpsLogFromCloud(courseId, legKey);
+      }
+
+      if (points && points.length > 0) {
+        const latlngs = points.map(p => [p.lat, p.lng]);
+        // 登録されている過去の軌跡情報を「赤い点線」で表示
+        registeredLegPolyline = L.polyline(latlngs, {
+          color: '#ef4444',
+          weight: 5,
+          opacity: 0.95,
+          dashArray: '6, 8',
+          lineCap: 'round',
+          lineJoin: 'round'
+        }).addTo(map);
+      }
+    }
 
     function checkProximityToTarget() {
       if (!currentTargetItem) return;
@@ -1595,9 +1629,20 @@
         updateItemStatusToCloud(currentCourse.id, currentTargetItem.id, true);
       }
 
+      // 今回走った区間のGPSログをクラウドへ自動保存
+      if (window.saveLegGpsLogToCloud && currentCourse && currentLegLogs.length > 0) {
+        const legKey = `leg_${currentLegFromOrder}_to_${lastFinishedOrder}`;
+        saveLegGpsLogToCloud(currentCourse.id, legKey, currentLegLogs);
+      }
+      currentLegFromOrder = lastFinishedOrder; // 次の出発地点オーダーを更新
+
       if (currentRouteLayer) {
         map.removeLayer(currentRouteLayer);
         currentRouteLayer = null;
+      }
+      if (registeredLegPolyline && map) {
+        map.removeLayer(registeredLegPolyline);
+        registeredLegPolyline = null;
       }
 
       alert(`✅ #${currentTargetItem.order || currentTargetItem.id} ${currentTargetItem.name} 様への配達が完了しました！`);
@@ -1742,7 +1787,14 @@
       recordedLogs = [];
 
       if (gpsPolyline) map.removeLayer(gpsPolyline);
-      gpsPolyline = L.polyline([], { color: '#ef4444', weight: 4 }).addTo(map);
+      // 🟡 通った軌跡は「薄い黄色の点線」で表示
+      gpsPolyline = L.polyline([], {
+        color: '#eab308',
+        weight: 4,
+        opacity: 0.85,
+        dashArray: '6, 8',
+        lineCap: 'round'
+      }).addTo(map);
 
       gpsWatchId = navigator.geolocation.watchPosition((pos) => {
         const pt = { lat: pos.coords.latitude, lng: pos.coords.longitude, time: pos.timestamp };
