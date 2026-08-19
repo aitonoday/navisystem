@@ -532,6 +532,9 @@
         <button class="btn btn-white" style="padding:6px 10px; font-size:12px;" onclick="exitToCourseSelect()">
           ◀ コース一覧
         </button>
+        <button id="toggleRouteLineBtn" class="btn btn-white" style="padding:5px 9px; font-size:12px; font-weight:700; color:#0284c7; border-color:#bae6fd; background:#f0f9ff;" onclick="toggleRouteLineVisibility()">
+          🛣️ ルート: ON
+        </button>
         <button class="btn btn-white" style="padding:5px 10px; font-size:12px; font-weight:700; color:#0f172a; border-color:#cbd5e1;" onclick="openMapSelectorModal()">
           🗺️ 地図変更
         </button>
@@ -735,10 +738,10 @@
     // キャッシュ互換性用（古いキャッシュが残っている端末でのエラーを100%防止）
     window.hookMapTouchRotation = function() {};
 
-    // --- Service Worker 強制更新 (v27) ---
+    // --- Service Worker 強制更新 (v28) ---
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=27').then((reg) => {
+        navigator.serviceWorker.register('sw.js?v=28').then((reg) => {
           reg.update();
         }).catch(err => console.log('SW registration failed:', err));
       });
@@ -777,6 +780,7 @@
     let map = null;
     let markers = [];
     let currentRouteLayer = null;
+    let isRouteLineVisible = localStorage.getItem('lively_navi_route_line_visible') !== 'false'; // デフォルトON
 
     let userCarMarker = null;
     let currentUserCoords = null;
@@ -787,6 +791,39 @@
     let recordedLogs = [];
     let currentLegLogs = [];
     let gpsPolyline = null;
+
+    window.toggleRouteLineVisibility = function() {
+      isRouteLineVisible = !isRouteLineVisible;
+      localStorage.setItem('lively_navi_route_line_visible', isRouteLineVisible ? 'true' : 'false');
+      updateRouteLineBtnUi();
+
+      if (!isRouteLineVisible) {
+        if (currentRouteLayer && map) {
+          map.removeLayer(currentRouteLayer);
+          currentRouteLayer = null;
+        }
+      } else {
+        if (currentTargetItem) {
+          calculateTransitRoute(currentTargetItem);
+        }
+      }
+    };
+
+    function updateRouteLineBtnUi() {
+      const btn = document.getElementById('toggleRouteLineBtn');
+      if (!btn) return;
+      if (isRouteLineVisible) {
+        btn.innerHTML = '🛣️ ルート: ON';
+        btn.style.color = '#0284c7';
+        btn.style.borderColor = '#bae6fd';
+        btn.style.background = '#f0f9ff';
+      } else {
+        btn.innerHTML = '🛣️ ルート: OFF';
+        btn.style.color = '#94a3b8';
+        btn.style.borderColor = '#cbd5e1';
+        btn.style.background = '#ffffff';
+      }
+    }
 
     // --- コースデータ取得（週次配達表フォーマット基準） ---
     const SAMPLE_COURSES = [
@@ -1515,6 +1552,14 @@
     }
 
     async function drawRouteLine(lng1, lat1, lng2, lat2) {
+      if (!isRouteLineVisible) {
+        if (currentRouteLayer && map) {
+          map.removeLayer(currentRouteLayer);
+          currentRouteLayer = null;
+        }
+        return;
+      }
+
       const url = `https://router.project-osrm.org/route/v1/driving/${lng1},${lat1};${lng2},${lat2}?overview=full&geometries=geojson`;
       try {
         const res = await fetch(url);
@@ -1735,6 +1780,8 @@
 
     // 初期化 & クラウドコース購読 & 運行セッション自動復元
     function initDriverApp() {
+      updateRouteLineBtnUi();
+
       // 画面1(view-course-select)内の不要な「地図切替」ボタンを強制完全除去
       try {
         document.querySelectorAll('#view-course-select button').forEach(b => {

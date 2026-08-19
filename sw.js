@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lively-navi-v27-depot-start-return-routes';
+const CACHE_NAME = 'lively-navi-v28-toggle-route-line-visibility';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
