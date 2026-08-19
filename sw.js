@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lively-navi-v31-remove-hash-and-depot-sama';
+const CACHE_NAME = 'lively-navi-v32-admin-red-dashed-gps-log';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
