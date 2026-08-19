@@ -564,8 +564,8 @@
         <button class="btn btn-white" style="padding:6px 10px; font-size:12px;" onclick="exitToCourseSelect()">
           ◀ コース一覧
         </button>
-        <button id="toggleRouteLineBtn" class="btn btn-white" style="padding:5px 9px; font-size:12px; font-weight:700; color:#0284c7; border-color:#bae6fd; background:#f0f9ff;" onclick="toggleRouteLineVisibility()">
-          🛣️ ルート: ON
+        <button id="toggleRouteLineBtn" class="btn btn-white" style="padding:5px 9px; font-size:12px; font-weight:700; color:#64748b; border-color:#cbd5e1; background:#ffffff;" onclick="toggleRouteLineVisibility()">
+          🛣️ ルート: OFF
         </button>
         <button class="btn btn-white" style="padding:5px 10px; font-size:12px; font-weight:700; color:#0f172a; border-color:#cbd5e1;" onclick="openMapSelectorModal()">
           🗺️ 地図変更
@@ -773,10 +773,10 @@
     // キャッシュ互換性用（古いキャッシュが残っている端末でのエラーを100%防止）
     window.hookMapTouchRotation = function() {};
 
-    // --- Service Worker 強制更新 (v36) ---
+    // --- Service Worker 強制更新 (v37) ---
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=36').then((reg) => {
+        navigator.serviceWorker.register('sw.js?v=37').then((reg) => {
           reg.update();
         }).catch(err => console.log('SW registration failed:', err));
       });
@@ -818,7 +818,7 @@
     let registeredLegPolyline = null; // 登録済み区間軌跡（赤色の丸ドット点線）
     let currentLegFromOrder = 0; // 今回の区間の出発地点オーダー番号
     let currentLegFromCode = 'DEPOT_50'; // 今回の区間の出発地点顧客コード
-    let isRouteLineVisible = localStorage.getItem('lively_navi_route_line_visible') !== 'false'; // デフォルトON
+    let isRouteLineVisible = localStorage.getItem('lively_navi_route_line_visible') === 'true'; // デフォルト OFF (false)
 
     let userCarMarker = null;
     let currentUserCoords = null;
@@ -857,7 +857,7 @@
         btn.style.background = '#f0f9ff';
       } else {
         btn.innerHTML = '🛣️ ルート: OFF';
-        btn.style.color = '#94a3b8';
+        btn.style.color = '#64748b';
         btn.style.borderColor = '#cbd5e1';
         btn.style.background = '#ffffff';
       }
@@ -1410,20 +1410,36 @@
     }
 
     async function calculateTransitRoute(targetItem) {
+      if (!targetItem) return;
+
+      // 1. 既知の出発座標（現在地GPS ➔ 直前到着地点 ➔ 起点）を決定
+      let fromLat = null;
+      let fromLng = null;
+
       if (currentUserCoords) {
-        drawRouteLine(currentUserCoords.lng, currentUserCoords.lat, targetItem.lng, targetItem.lat);
-      } else {
-        navigator.geolocation.getCurrentPosition(async (pos) => {
-          const fromLng = pos.coords.longitude;
-          const fromLat = pos.coords.latitude;
-          drawRouteLine(fromLng, fromLat, targetItem.lng, targetItem.lat);
-        }, () => {
-          if (lastArrivedCoords) {
-            drawRouteLine(lastArrivedCoords.lng, lastArrivedCoords.lat, targetItem.lng, targetItem.lat);
-          } else {
-            map.setView([targetItem.lat, targetItem.lng], 16);
+        fromLat = currentUserCoords.lat;
+        fromLng = currentUserCoords.lng;
+      } else if (lastArrivedCoords) {
+        fromLat = lastArrivedCoords.lat;
+        fromLng = lastArrivedCoords.lng;
+      } else if (currentCourse && currentCourse.items && currentCourse.items.length > 0) {
+        fromLat = currentCourse.items[0].lat;
+        fromLng = currentCourse.items[0].lng;
+      }
+
+      // 2. 出発座標があれば即座にルート線を描画！
+      if (fromLat !== null && fromLng !== null) {
+        drawRouteLine(fromLng, fromLat, targetItem.lng, targetItem.lat);
+      }
+
+      // 3. バックグラウンドで最新GPS測位を試行（測位できたら最新現在地ルートに更新）
+      if (!currentUserCoords && navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition((pos) => {
+          currentUserCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          if (isRouteLineVisible && currentTargetItem) {
+            drawRouteLine(pos.coords.longitude, pos.coords.latitude, currentTargetItem.lng, currentTargetItem.lat);
           }
-        });
+        }, () => {}, { enableHighAccuracy: true, timeout: 5000 });
       }
     }
 

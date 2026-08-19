@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lively-navi-v36-right-center-zoom-controls';
+const CACHE_NAME = 'lively-navi-v37-default-off-instant-on-routing';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
