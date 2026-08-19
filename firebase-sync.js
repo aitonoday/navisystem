@@ -363,17 +363,32 @@ async function appendGpsLogToCloud(courseId, point) {
 }
 
 async function fetchGpsLogFromCloud(courseId) {
-  if (!firebaseDb) return [];
+  // 1. ダイレクト REST API (GET)
   try {
-    const snapshot = await firebaseDb.ref(`logs/${courseId}/points`).once('value');
-    const data = snapshot.val();
-    if (data) {
-      return Object.values(data);
+    const res = await fetch(`${CLOUD_RTDB_BASE}/logs/${courseId}/points.json?t=${Date.now()}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data && typeof data === 'object') {
+        const points = Object.values(data);
+        if (points.length > 0) {
+          return points;
+        }
+      }
     }
-    return [];
-  } catch (err) {
-    return [];
+  } catch (e) {}
+
+  // 2. Firebase SDK fallback
+  if (!firebaseDb) initFirebaseApp(getSavedFirebaseConfig());
+  if (firebaseDb) {
+    try {
+      const snapshot = await firebaseDb.ref(`logs/${courseId}/points`).once('value');
+      const data = snapshot.val();
+      if (data) {
+        return Object.values(data);
+      }
+    } catch (err) {}
   }
+  return [];
 }
 
 // 初期化実行 & 地点補正マスターの自動同期
