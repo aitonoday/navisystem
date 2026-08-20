@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lively-navi-v38-guaranteed-leg-tracks-and-off-route-start';
+const CACHE_NAME = 'lively-navi-v39-all-146-legs-fully-populated';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();

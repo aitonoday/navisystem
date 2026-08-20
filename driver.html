@@ -773,10 +773,10 @@
     // キャッシュ互換性用（古いキャッシュが残っている端末でのエラーを100%防止）
     window.hookMapTouchRotation = function() {};
 
-    // --- Service Worker 強制更新 (v38) ---
+    // --- Service Worker 強制更新 (v39) ---
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=38').then((reg) => {
+        navigator.serviceWorker.register('sw.js?v=39').then((reg) => {
           reg.update();
         }).catch(err => console.log('SW registration failed:', err));
       });
@@ -1360,15 +1360,19 @@
 
       if (points && points.length > 0) {
         const latlngs = points.map(p => [p.lat, p.lng]);
-        // 🔴 登録されている過去の軌跡情報を「赤色の丸ドット点線」で表示
+        // 🔴 登録されている過去の軌跡情報を「赤色の丸ドット点線」で鮮明に表示
         registeredLegPolyline = L.polyline(latlngs, {
           color: '#ef4444',
-          weight: 7,
-          opacity: 0.95,
-          dashArray: '0, 16',
+          weight: 8,
+          opacity: 0.98,
+          dashArray: '0, 14',
           lineCap: 'round',
           lineJoin: 'round'
         }).addTo(map);
+
+        if (registeredLegPolyline.bringToFront) {
+          registeredLegPolyline.bringToFront();
+        }
         console.log(`✅ Loaded leg track for [${fromCode} (${fromOrder}) -> ${toCode} (${toOrder})]: ${points.length} pts`);
       } else {
         console.log(`ℹ️ No registered leg track found for [${fromCode} (${fromOrder}) -> ${toCode} (${toOrder})]`);
