@@ -355,6 +355,57 @@
         📱 スマホドライバー画面を開く ↗
       </a>
       <button id="btnExportAll" class="btn btn-white" onclick="exportDataBackup()">💾 バックアップ</button>
+      <button class="btn btn-white" style="color:#ef4444; border-color:#fecaca;" onclick="lockAdminConsole()" title="管理コンソールをロック">
+        🔒 ロック
+      </button>
+      <button class="btn btn-white" style="font-size:12px; padding:6px 10px;" onclick="openChangePinModal()" title="管理者暗証番号を変更">
+        🔑 PIN変更
+      </button>
+    </div>
+  </div>
+
+  <!-- 🔐 管理者セキュリティ認証オーバーレイ (未認証時は画面を完全保護) -->
+  <div id="adminSecurityLockOverlay" style="position:fixed; top:0; left:0; right:0; bottom:0; background:linear-gradient(135deg, #0f172a 0%, #1e293b 100%); z-index:999999; display:flex; align-items:center; justify-content:center; padding:20px;">
+    <div style="background:#ffffff; border-radius:28px; padding:36px; max-width:400px; width:100%; box-shadow:0 25px 60px rgba(0,0,0,0.4); text-align:center; animation:fadeIn 0.3s cubic-bezier(0.16,1,0.3,1);">
+      <div style="width:64px; height:64px; background:linear-gradient(135deg, #0d9488 0%, #0284c7 100%); border-radius:20px; display:flex; align-items:center; justify-content:center; margin:0 auto 18px; font-size:30px; box-shadow:0 8px 24px rgba(13,148,136,0.35);">
+        🔐
+      </div>
+      <h2 style="font-size:20px; font-weight:800; color:#0f172a; margin:0 0 6px;">管理者認証</h2>
+      <p style="font-size:13px; color:#64748b; margin:0 0 24px;">暗証番号（PINコード）を入力してください<br><span style="font-size:11px; color:#94a3b8;">(初期暗証番号: 7788)</span></p>
+
+      <form id="adminPinForm" onsubmit="handlePinSubmit(event)">
+        <div style="margin-bottom:20px;">
+          <input type="password" id="adminPinInput" maxlength="12" placeholder="暗証番号 (PIN)" autocomplete="off" style="width:100%; padding:14px; text-align:center; font-size:24px; letter-spacing:8px; font-weight:800; border:2px solid #e2e8f0; border-radius:16px; outline:none; transition:all 0.2s;" onfocus="this.style.borderColor='#0d9488'" onblur="this.style.borderColor='#e2e8f0'">
+          <div id="pinErrorMessage" style="color:#ef4444; font-size:12px; font-weight:700; margin-top:8px; display:none;">⚠️ 暗証番号が正しくありません</div>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%; padding:14px; font-size:15px; border-radius:14px; justify-content:center;">
+          🔓 ロック解除
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- 🔑 暗証番号（PIN）変更モーダル -->
+  <div id="changePinModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(15,23,42,0.5); z-index:99999; align-items:center; justify-content:center; backdrop-filter:blur(6px);">
+    <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:24px; padding:28px; max-width:400px; width:90%; box-shadow:0 20px 50px rgba(15,23,42,0.2);">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid #f1f5f9; padding-bottom:12px;">
+        <b style="font-size:16px; color:#0f172a; font-weight:800;">🔑 管理者暗証番号の変更</b>
+        <button class="btn btn-white" style="padding:2px 8px; font-size:12px;" onclick="closeChangePinModal()">✕</button>
+      </div>
+      <form onsubmit="handleSaveNewPin(event)">
+        <div style="margin-bottom:12px;">
+          <label style="font-size:12px; font-weight:700; color:#475569; display:block; margin-bottom:4px;">現在の暗証番号</label>
+          <input type="password" id="currentPinInput" required style="width:100%; padding:10px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:14px;">
+        </div>
+        <div style="margin-bottom:16px;">
+          <label style="font-size:12px; font-weight:700; color:#475569; display:block; margin-bottom:4px;">新しい暗証番号 (4〜12桁)</label>
+          <input type="password" id="newPinInput" minlength="4" maxlength="12" required placeholder="例: 8899" style="width:100%; padding:10px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:14px;">
+        </div>
+        <div style="display:flex; gap:8px; justify-content:flex-end;">
+          <button type="button" class="btn btn-white" onclick="closeChangePinModal()">キャンセル</button>
+          <button type="submit" class="btn btn-primary">変更を保存</button>
+        </div>
+      </form>
     </div>
   </div>
 
@@ -1566,6 +1617,89 @@
       }
     }
 
+    // =========================================================================
+    // 🔐 セキュリティ・管理者暗証番号（PIN）認証制御
+    // =========================================================================
+    const ADMIN_PIN_STORAGE_KEY = 'lively_navi_admin_pin_hash';
+    const ADMIN_SESSION_AUTH_KEY = 'lively_navi_admin_authenticated';
+    const DEFAULT_PIN = '7788';
+
+    function getAdminPin() {
+      return localStorage.getItem(ADMIN_PIN_STORAGE_KEY) || DEFAULT_PIN;
+    }
+
+    function checkAdminAuth() {
+      const isAuth = sessionStorage.getItem(ADMIN_SESSION_AUTH_KEY) === 'true';
+      const overlay = document.getElementById('adminSecurityLockOverlay');
+      if (!overlay) return;
+
+      if (isAuth) {
+        overlay.style.display = 'none';
+      } else {
+        overlay.style.display = 'flex';
+        setTimeout(() => {
+          const input = document.getElementById('adminPinInput');
+          if (input) input.focus();
+        }, 100);
+      }
+    }
+
+    window.handlePinSubmit = function(e) {
+      if (e) e.preventDefault();
+      const input = document.getElementById('adminPinInput');
+      const errorMsg = document.getElementById('pinErrorMessage');
+      const enteredPin = input.value.trim();
+
+      if (enteredPin === getAdminPin()) {
+        sessionStorage.setItem(ADMIN_SESSION_AUTH_KEY, 'true');
+        if (errorMsg) errorMsg.style.display = 'none';
+        input.value = '';
+        checkAdminAuth();
+        showToast("🔓 管理コンソールのロックを解除しました", "success");
+      } else {
+        if (errorMsg) errorMsg.style.display = 'block';
+        input.value = '';
+        input.focus();
+      }
+    };
+
+    window.lockAdminConsole = function() {
+      sessionStorage.removeItem(ADMIN_SESSION_AUTH_KEY);
+      checkAdminAuth();
+      showToast("🔒 管理コンソールをロックしました", "success");
+    };
+
+    window.openChangePinModal = function() {
+      document.getElementById('changePinModal').style.display = 'flex';
+      document.getElementById('currentPinInput').value = '';
+      document.getElementById('newPinInput').value = '';
+      setTimeout(() => document.getElementById('currentPinInput').focus(), 100);
+    };
+
+    window.closeChangePinModal = function() {
+      document.getElementById('changePinModal').style.display = 'none';
+    };
+
+    window.handleSaveNewPin = function(e) {
+      if (e) e.preventDefault();
+      const currentPin = document.getElementById('currentPinInput').value.trim();
+      const newPin = document.getElementById('newPinInput').value.trim();
+
+      if (currentPin !== getAdminPin()) {
+        alert("⚠️ 現在の暗証番号が正しくありません。");
+        return;
+      }
+      if (newPin.length < 4) {
+        alert("⚠️ 新しい暗証番号は4桁以上で設定してください。");
+        return;
+      }
+
+      localStorage.setItem(ADMIN_PIN_STORAGE_KEY, newPin);
+      alert("✅ 暗証番号を正常に変更しました！次回以降この番号でロック解除してください。");
+      closeChangePinModal();
+    };
+
+    checkAdminAuth();
     renderCourseList();
     initCloudSubscriptions();
   </script>

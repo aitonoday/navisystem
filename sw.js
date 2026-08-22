@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lively-navi-v56-clean-map-selector-text';
+const CACHE_NAME = 'lively-navi-v57-enterprise-security-and-data-purge';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();

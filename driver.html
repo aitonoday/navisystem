@@ -527,6 +527,20 @@
       <div id="courseCardsContainer">
         <!-- コースカード動的挿入 -->
       </div>
+
+      <!-- 🛡️ セキュリティ：業務終了後の個人情報安全消去エリア -->
+      <div style="margin-top:24px; padding:16px; background:#f8fafc; border:1.5px dashed #cbd5e1; border-radius:18px; text-align:center;">
+        <div style="font-size:12px; font-weight:800; color:#475569; margin-bottom:4px; display:flex; align-items:center; justify-content:center; gap:6px;">
+          🛡️ セキュリティ・個人情報保護
+        </div>
+        <p style="font-size:11px; color:#94a3b8; margin:0 0 10px; line-height:1.4;">
+          本日の配送業務が終了したら、スマホ内の顧客情報（氏名・住所・メモ）を消去して端末を安全な状態に保てます。<br>
+          <span style="color:#0d9488; font-weight:600;">※位置情報や走行軌跡のマスターデータは保持されます。</span>
+        </p>
+        <button class="btn btn-white" style="width:100%; padding:10px; font-size:12px; font-weight:800; color:#ef4444; border-color:#fca5a5; background:#fff;" onclick="purgePersonalData()">
+          🧹 業務終了：スマホ内の個人情報を安全消去
+        </button>
+      </div>
     </div>
 
     <!-- ================= 画面2: 運行・ナビ画面 (NAVIGATION) ================= -->
@@ -754,10 +768,10 @@
     // キャッシュ互換性用（古いキャッシュが残っている端末でのエラーを100%防止）
     window.hookMapTouchRotation = function() {};
 
-    // --- Service Worker 強制更新 (v56) ---
+    // --- Service Worker 強制更新 (v57) ---
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=56').then((reg) => {
+        navigator.serviceWorker.register('sw.js?v=57').then((reg) => {
           reg.update();
         }).catch(err => console.log('SW registration failed:', err));
       });
@@ -895,6 +909,29 @@
     function saveCourses(courses) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(courses));
     }
+
+    // 🛡️ 業務終了・個人情報データの安全消去（パージ）
+    window.purgePersonalData = function() {
+      if (!confirm("【セキュリティ確認】\n本日の配送業務終了に伴い、スマホ内の顧客個人情報（氏名・住所・メモ・完了記録）を安全に消去しますか？\n\n※位置情報や走行軌跡のマスターデータは保持されます。")) {
+        return;
+      }
+
+      try {
+        // 1. コース情報の削除（個人情報の完全消去）
+        localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem(ACTIVE_STATE_KEY);
+        currentCourse = null;
+        currentTargetItem = null;
+
+        // 2. 一覧を再描画
+        refreshCourses();
+
+        alert("🛡️ スマホ内の個人情報（氏名・住所・メモ）を安全に消去いたしました。\nお疲れ様でした！");
+      } catch (e) {
+        console.error("Purge error:", e);
+        alert("消去中にエラーが発生しました: " + e.message);
+      }
+    };
 
     // ☁️ クラウドから最新コースを強制取得して同期
     window.syncWithCloudDirect = async function() {
