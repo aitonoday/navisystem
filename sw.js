@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lively-navi-v45-no-labels-clean-map-option';
+const CACHE_NAME = 'lively-navi-v46-mega-canvas-250-no-cutout';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();

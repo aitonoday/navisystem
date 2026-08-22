@@ -291,12 +291,12 @@
       background: #f1f5f9;
       transform-origin: 50% 50%;
     }
-    /* 🧭 ヘディングアップ時は対角線を完全カバー（160%）して四隅のグレー余白を100%排除 */
+    /* 🧭 ヘディングアップ時は超縦長スマホ（20:9）の対角線をも完全カバー（250%巨大正方形）してグレー見切れを100%完全排除 */
     #map.heading-up-active {
-      width: 160% !important;
-      height: 160% !important;
-      top: -30% !important;
-      left: -30% !important;
+      width: 250% !important;
+      height: 250% !important;
+      top: -75% !important;
+      left: -75% !important;
       transform-origin: 50% 50% !important;
       transition: transform 0.35s cubic-bezier(0.25, 1, 0.5, 1);
     }
@@ -832,10 +832,10 @@
     // キャッシュ互換性用（古いキャッシュが残っている端末でのエラーを100%防止）
     window.hookMapTouchRotation = function() {};
 
-    // --- Service Worker 強制更新 (v45) ---
+    // --- Service Worker 強制更新 (v46) ---
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=45').then((reg) => {
+        navigator.serviceWorker.register('sw.js?v=46').then((reg) => {
           reg.update();
         }).catch(err => console.log('SW registration failed:', err));
       });
@@ -1778,7 +1778,7 @@
         availableTileLayers['carto'] = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
           maxZoom: 19,
           subdomains: 'abcd',
-          keepBuffer: 12,
+          keepBuffer: 16,
           attribution: '© <a href="https://carto.com/">CARTO</a> © <a href="https://www.openstreetmap.org/">OSM</a>'
         });
 
@@ -1786,35 +1786,35 @@
         availableTileLayers['carto_nolabels'] = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png', {
           maxZoom: 19,
           subdomains: 'abcd',
-          keepBuffer: 12,
+          keepBuffer: 16,
           attribution: '© <a href="https://carto.com/">CARTO</a> © <a href="https://www.openstreetmap.org/">OSM</a>'
         });
 
         // 2. OpenStreetMap 標準
         availableTileLayers['osm'] = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           maxZoom: 19,
-          keepBuffer: 12,
+          keepBuffer: 16,
           attribution: '© <a href="https://www.openstreetmap.org/">OpenStreetMap</a>'
         });
 
         // 3. 国土地理院 航空写真
         availableTileLayers['photo'] = L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg', {
           maxZoom: 18,
-          keepBuffer: 12,
+          keepBuffer: 16,
           attribution: '© <a href="https://maps.gsi.go.jp/">国土地理院 航空写真</a>'
         });
 
         // 4. 国土地理院 淡色地図
         availableTileLayers['pale'] = L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png', {
           maxZoom: 18,
-          keepBuffer: 12,
+          keepBuffer: 16,
           attribution: '© <a href="https://maps.gsi.go.jp/">国土地理院</a>'
         });
 
         // 5. 国土地理院 標準地図
         availableTileLayers['std'] = L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', {
           maxZoom: 18,
-          keepBuffer: 12,
+          keepBuffer: 16,
           attribution: '© <a href="https://maps.gsi.go.jp/">国土地理院</a>'
         });
 
