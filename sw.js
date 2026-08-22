@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lively-navi-v41-heading-up-160-diagonal-smooth-center';
+const CACHE_NAME = 'lively-navi-v42-clean-ui-pinch-zoom-only';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
