@@ -359,6 +359,60 @@
       color: #0d9488 !important;
     }
 
+    /* 🧭 ヘディングアップ（地図回転）アニメーション & マーカー逆回転 */
+    #map.heading-up-active .leaflet-map-pane {
+      transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+      transform-origin: center center;
+    }
+    #map.heading-up-active .custom-delivery-pin,
+    #map.heading-up-active .leaflet-popup,
+    #map.heading-up-active .gps-log-start-pin,
+    #map.heading-up-active .gps-log-end-pin {
+      transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+    }
+    
+    /* 🧭 コンパス（方位磁針）ボタン */
+    .compass-btn {
+      position: relative;
+      border-radius: 50% !important;
+      width: 48px !important;
+      height: 48px !important;
+      padding: 0 !important;
+      box-shadow: 0 6px 18px rgba(15, 23, 42, 0.18) !important;
+      background: #ffffff !important;
+      border: 2px solid #cbd5e1 !important;
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: center !important;
+      justify-content: center !important;
+      cursor: pointer;
+      overflow: hidden;
+      transition: all 0.2s;
+    }
+    .compass-btn.active-heading {
+      border-color: #0284c7 !important;
+      background: #f0f9ff !important;
+      box-shadow: 0 6px 20px rgba(2, 132, 199, 0.35) !important;
+    }
+    .compass-needle-icon {
+      width: 24px;
+      height: 24px;
+      transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .compass-mode-label {
+      font-size: 8px;
+      font-weight: 900;
+      color: #64748b;
+      margin-top: -2px;
+      line-height: 1;
+    }
+    .compass-btn.active-heading .compass-mode-label {
+      color: #0284c7;
+    }
+
     /* 📱 横向き（Landscape）最適化：超スリムな完全1段（1行）レイアウト */
     @media (orientation: landscape) {
       #nav-header {
@@ -653,15 +707,31 @@
         <!-- 地図本体（全画面） -->
         <div id="map"></div>
 
-        <!-- 右下フローティングコントロール（地図切替 ＆ 現在地センタリング） -->
+        <!-- 右下フローティングコントロール（🧭 コンパス方位切替 ＆ 🗺️ 地図切替 ＆ 📍 現在地センタリング） -->
         <div style="position:absolute; bottom:20px; right:16px; z-index:1000; display:flex; flex-direction:column; gap:10px; align-items:center;">
+          <!-- 🧭 ヘディングアップ / ノースアップ 切替コンパスボタン -->
+          <button id="btnToggleHeadingMode" class="compass-btn" onclick="toggleHeadingMode()" title="ヘディングアップ / ノースアップ切替">
+            <div id="compassNeedleIcon" class="compass-needle-icon">
+              <!-- 精緻なコンパス針 SVG -->
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <!-- 北の赤い針 -->
+                <polygon points="12,2 15,12 12,10 9,12" fill="#ef4444" />
+                <!-- 南のシルバー針 -->
+                <polygon points="12,22 15,12 12,14 9,12" fill="#94a3b8" />
+                <!-- 中央ピボット -->
+                <circle cx="12" cy="12" r="1.5" fill="#0f172a" />
+              </svg>
+            </div>
+            <span id="compassModeText" class="compass-mode-label">北上固定</span>
+          </button>
+
           <!-- 🗺️ 地図の種類切替ボタン -->
           <button id="btnOpenMapSelector" class="btn btn-white" style="border-radius:50%; width:46px; height:46px; padding:0; box-shadow:0 6px 16px rgba(0,0,0,0.15); font-size:20px; color:#0f172a; border:1.5px solid #e2e8f0;" onclick="openMapSelectorModal()" title="地図の種類を変更">
             🗺️
           </button>
 
           <!-- 📍 現在地へセンタリングするボタン -->
-          <button id="btnRecenterLocation" class="btn btn-white" style="border-radius:50%; width:46px; height:46px; padding:0; box-shadow:0 6px 16px rgba(0,0,0,0.12); font-size:20px; color:#0d9488; border:1px solid #e2e8f0;" onclick="centerOnUserLocation()" title="現在地を中心にする">
+          <button id="btnRecenterLocation" class="btn btn-white" style="border-radius:50%; width:46px; height:46px; padding:0; box-shadow:0 6px 16px rgba(0,0,0,0.12); font-size:20px; color:#0d9488; border:1.5px solid #e2e8f0;" onclick="centerOnUserLocation()" title="現在地を中心にする">
             📍
           </button>
         </div>
@@ -773,10 +843,10 @@
     // キャッシュ互換性用（古いキャッシュが残っている端末でのエラーを100%防止）
     window.hookMapTouchRotation = function() {};
 
-    // --- Service Worker 強制更新 (v39) ---
+    // --- Service Worker 強制更新 (v40) ---
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=39').then((reg) => {
+        navigator.serviceWorker.register('sw.js?v=40').then((reg) => {
           reg.update();
         }).catch(err => console.log('SW registration failed:', err));
       });
@@ -820,6 +890,12 @@
     let currentLegFromCode = 'DEPOT_50'; // 今回の区間の出発地点顧客コード
     let isRouteLineVisible = false; // 起動時は常に完全 OFF
 
+    // 🧭 ヘディングアップ / ノースアップ 設定
+    const HEADING_MODE_KEY = 'lively_navi_heading_mode';
+    let headingMode = localStorage.getItem(HEADING_MODE_KEY) || 'north-up'; // 'north-up' または 'heading-up'
+    let currentHeading = 0; // 現在の方位角（0〜360度）
+    let lastHeadingCoords = null; // 直前GPS座標
+
     let userCarMarker = null;
     let currentUserCoords = null;
     let shouldCenterOnUser = true;
@@ -829,6 +905,99 @@
     let recordedLogs = [];
     let currentLegLogs = [];
     let gpsPolyline = null; // 今回通った軌跡（薄い黄色の丸ドット点線）
+
+    // 🧭 ヘディングアップ / ノースアップ 切替
+    window.toggleHeadingMode = function() {
+      if (headingMode === 'north-up') {
+        headingMode = 'heading-up';
+      } else {
+        headingMode = 'north-up';
+      }
+      localStorage.setItem(HEADING_MODE_KEY, headingMode);
+      updateHeadingModeUi();
+      updateMapHeading(currentHeading);
+    };
+
+    function updateHeadingModeUi() {
+      const btn = document.getElementById('btnToggleHeadingMode');
+      const text = document.getElementById('compassModeText');
+      if (!btn || !text) return;
+
+      if (headingMode === 'heading-up') {
+        btn.classList.add('active-heading');
+        text.innerText = '進行方向';
+        text.style.color = '#0284c7';
+      } else {
+        btn.classList.remove('active-heading');
+        text.innerText = '北上固定';
+        text.style.color = '#64748b';
+      }
+    }
+
+    // 🧭 地図の回転＆コンパス針のリアルタイム同期
+    function updateMapHeading(heading) {
+      if (isNaN(heading)) return;
+      currentHeading = heading;
+
+      const mapEl = document.getElementById('map');
+      const compassNeedle = document.getElementById('compassNeedleIcon');
+
+      if (headingMode === 'heading-up') {
+        // 🚗 ヘディングアップ: 進行方向を上にするため地図ペインを -heading 度回転
+        if (mapEl) {
+          mapEl.classList.add('heading-up-active');
+          const pane = mapEl.querySelector('.leaflet-map-pane');
+          if (pane) {
+            pane.style.transform = `rotate(${-heading}deg)`;
+          }
+        }
+        // マーカー・文字（逆回転して常に水平・読みやすい正立を保持）
+        document.querySelectorAll('.custom-delivery-pin, .gps-log-start-pin, .gps-log-end-pin, .leaflet-popup').forEach(el => {
+          el.style.transform = `rotate(${heading}deg)`;
+        });
+        // 車両マーカーは進行方向固定（画面上向き）
+        const carMarkerEl = document.querySelector('.car-marker-container');
+        if (carMarkerEl) {
+          carMarkerEl.style.transform = 'rotate(0deg)';
+        }
+        // コンパス針は実際の北を指す（-heading 度回転）
+        if (compassNeedle) {
+          compassNeedle.style.transform = `rotate(${-heading}deg)`;
+        }
+      } else {
+        // 🧭 ノースアップ: 北上固定（地図回転 0 度）
+        if (mapEl) {
+          mapEl.classList.remove('heading-up-active');
+          const pane = mapEl.querySelector('.leaflet-map-pane');
+          if (pane) {
+            pane.style.transform = 'none';
+          }
+        }
+        document.querySelectorAll('.custom-delivery-pin, .gps-log-start-pin, .gps-log-end-pin, .leaflet-popup').forEach(el => {
+          el.style.transform = 'none';
+        });
+        // 車両マーカーは現在の方位角を向く
+        const carMarkerEl = document.querySelector('.car-marker-container');
+        if (carMarkerEl) {
+          carMarkerEl.style.transform = `rotate(${heading}deg)`;
+        }
+        // コンパス針は北（0 度固定）
+        if (compassNeedle) {
+          compassNeedle.style.transform = 'rotate(0deg)';
+        }
+      }
+    }
+
+    // 2点間の球面方位角（Bearing）を算出（0〜360度）
+    function calculateBearing(lat1, lon1, lat2, lon2) {
+      const toRad = Math.PI / 180;
+      const toDeg = 180 / Math.PI;
+      const y = Math.sin((lon2 - lon1) * toRad) * Math.cos(lat2 * toRad);
+      const x = Math.cos(lat1 * toRad) * Math.sin(lat2 * toRad) -
+                Math.sin(lat1 * toRad) * Math.cos(lat2 * toRad) * Math.cos((lon2 - lon1) * toRad);
+      let brng = Math.atan2(y, x) * toDeg;
+      return (brng + 360) % 360;
+    }
 
     window.toggleRouteLineVisibility = function() {
       isRouteLineVisible = !isRouteLineVisible;
@@ -1912,6 +2081,21 @@
         gpsPolyline.addLatLng([pt.lat, pt.lng]);
         document.getElementById('gpsPointCount').innerText = recordedLogs.length;
 
+        // 🧭 方位角（Heading / Bearing）の検知・算出
+        let calculatedHeading = currentHeading;
+        if (pos.coords.heading !== null && !isNaN(pos.coords.heading) && pos.coords.heading >= 0) {
+          calculatedHeading = pos.coords.heading;
+        } else if (lastHeadingCoords) {
+          const dist = map.distance([lastHeadingCoords.lat, lastHeadingCoords.lng], [pt.lat, pt.lng]);
+          if (dist > 1.5) { // 1.5m以上移動した場合に進行方位角を算出
+            calculatedHeading = calculateBearing(lastHeadingCoords.lat, lastHeadingCoords.lng, pt.lat, pt.lng);
+            lastHeadingCoords = pt;
+          }
+        } else {
+          lastHeadingCoords = pt;
+        }
+
+        updateMapHeading(calculatedHeading);
         updateCarMarker(pt.lat, pt.lng);
 
         const now = Date.now();
@@ -1942,6 +2126,25 @@
     // 初期化 & クラウドコース購読 & 運行セッション自動復元
     function initDriverApp() {
       updateRouteLineBtnUi();
+      updateHeadingModeUi();
+
+      // 🧭 端末コンパス（ジャイロ）対応 (iOS / Android)
+      if (window.DeviceOrientationEvent) {
+        window.addEventListener('deviceorientation', (e) => {
+          let compassHeading = null;
+          if (e.webkitCompassHeading) {
+            compassHeading = e.webkitCompassHeading;
+          } else if (e.alpha !== null) {
+            compassHeading = (360 - e.alpha) % 360;
+          }
+          if (compassHeading !== null && !isNaN(compassHeading)) {
+            // 停車中などにコンパス方位を活用
+            if (!isGpsRecording || !lastHeadingCoords) {
+              updateMapHeading(compassHeading);
+            }
+          }
+        }, true);
+      }
 
       // 画面1(view-course-select)内の不要な「地図切替」ボタンを強制完全除去
       try {
