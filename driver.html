@@ -289,16 +289,16 @@
       left: 0;
       margin: 0;
       background: #f1f5f9;
-      transform-origin: 50% 50%;
     }
-    /* 🧭 ヘディングアップ時は超縦長スマホ（20:9）の対角線をも完全カバー（250%巨大正方形）してグレー見切れを100%完全排除 */
-    #map.heading-up-active {
-      width: 250% !important;
-      height: 250% !important;
-      top: -75% !important;
-      left: -75% !important;
-      transform-origin: 50% 50% !important;
+    /* 🧭 ヘディングアップ時のLeafletペイン回転（中心は厳密に画面中央 50% 50% に100%固定） */
+    #map .leaflet-map-pane {
       transition: transform 0.35s cubic-bezier(0.25, 1, 0.5, 1);
+      transform-origin: 50% 50% !important;
+    }
+    /* タイル描画層のみを広範囲にスケーリングして四隅・左右のグレー見切れを100%防止 */
+    #map.heading-up-active .leaflet-tile-pane {
+      transform: scale(2.6);
+      transform-origin: 50% 50%;
     }
 
     /* 🚚 02. NAVIGATION 公式デザイン HUDカード（画面最上部） */
@@ -832,10 +832,10 @@
     // キャッシュ互換性用（古いキャッシュが残っている端末でのエラーを100%防止）
     window.hookMapTouchRotation = function() {};
 
-    // --- Service Worker 強制更新 (v46) ---
+    // --- Service Worker 強制更新 (v47) ---
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=46').then((reg) => {
+        navigator.serviceWorker.register('sw.js?v=47').then((reg) => {
           reg.update();
         }).catch(err => console.log('SW registration failed:', err));
       });
@@ -955,8 +955,11 @@
       if (headingMode === 'heading-up') {
         if (mapEl) {
           mapEl.classList.add('heading-up-active');
-          // #map全体を画面中央(50% 50%)中心に回転
-          mapEl.style.transform = `rotate(${-heading}deg)`;
+          const pane = mapEl.querySelector('.leaflet-map-pane');
+          if (pane) {
+            // Leaflet地図ペイン全体を画面中央(50% 50%)中心に正確に回転
+            pane.style.transform = `rotate(${-heading}deg)`;
+          }
         }
         // 配達先ピン・文字（逆回転して常に水平・正立を保つ）
         document.querySelectorAll('.custom-delivery-pin, .gps-log-start-pin, .gps-log-end-pin, .leaflet-popup').forEach(el => {
@@ -974,7 +977,10 @@
       } else {
         if (mapEl) {
           mapEl.classList.remove('heading-up-active');
-          mapEl.style.transform = 'none';
+          const pane = mapEl.querySelector('.leaflet-map-pane');
+          if (pane) {
+            pane.style.transform = 'none';
+          }
         }
         document.querySelectorAll('.custom-delivery-pin, .gps-log-start-pin, .gps-log-end-pin, .leaflet-popup').forEach(el => {
           el.style.transform = 'none';

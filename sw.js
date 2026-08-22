@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lively-navi-v46-mega-canvas-250-no-cutout';
+const CACHE_NAME = 'lively-navi-v47-true-center-pane-rotation';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
