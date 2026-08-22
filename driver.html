@@ -279,12 +279,26 @@
       position: relative;
       background: #f1f5f9;
       overflow: hidden;
+      position: relative;
     }
     #map {
       width: 100%;
       height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
       margin: 0;
       background: #f1f5f9;
+      transform-origin: 50% 50%;
+    }
+    /* 🧭 ヘディングアップ時は対角線を完全カバー（160%）して四隅のグレー余白を100%排除 */
+    #map.heading-up-active {
+      width: 160% !important;
+      height: 160% !important;
+      top: -30% !important;
+      left: -30% !important;
+      transform-origin: 50% 50% !important;
+      transition: transform 0.35s cubic-bezier(0.25, 1, 0.5, 1);
     }
 
     /* 🚚 02. NAVIGATION 公式デザイン HUDカード（画面最上部） */
@@ -359,16 +373,13 @@
       color: #0d9488 !important;
     }
 
-    /* 🧭 ヘディングアップ（地図回転）アニメーション & マーカー逆回転 */
-    #map.heading-up-active .leaflet-map-pane {
-      transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
-      transform-origin: center center;
-    }
+    /* 🧭 ヘディングアップ時のピン・マーカー逆回転（常に水平で読みやすさを維持） */
     #map.heading-up-active .custom-delivery-pin,
     #map.heading-up-active .leaflet-popup,
     #map.heading-up-active .gps-log-start-pin,
     #map.heading-up-active .gps-log-end-pin {
-      transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+      transition: transform 0.35s cubic-bezier(0.25, 1, 0.5, 1);
+      transform-origin: 50% 50%;
     }
     
     /* 🧭 コンパス（方位磁針）ボタン */
@@ -843,10 +854,10 @@
     // キャッシュ互換性用（古いキャッシュが残っている端末でのエラーを100%防止）
     window.hookMapTouchRotation = function() {};
 
-    // --- Service Worker 強制更新 (v40) ---
+    // --- Service Worker 強制更新 (v41) ---
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=40').then((reg) => {
+        navigator.serviceWorker.register('sw.js?v=41').then((reg) => {
           reg.update();
         }).catch(err => console.log('SW registration failed:', err));
       });
@@ -915,6 +926,23 @@
       }
       localStorage.setItem(HEADING_MODE_KEY, headingMode);
       updateHeadingModeUi();
+
+      const mapEl = document.getElementById('map');
+      if (mapEl) {
+        if (headingMode === 'heading-up') {
+          mapEl.classList.add('heading-up-active');
+        } else {
+          mapEl.classList.remove('heading-up-active');
+        }
+      }
+
+      if (map) {
+        map.invalidateSize();
+        if (currentUserCoords && shouldCenterOnUser) {
+          map.setView([currentUserCoords.lat, currentUserCoords.lng], map.getZoom(), { animate: false });
+        }
+      }
+
       updateMapHeading(currentHeading);
     };
 
@@ -934,7 +962,7 @@
       }
     }
 
-    // 🧭 地図の回転＆コンパス針のリアルタイム同期
+    // 🧭 地図の回転＆コンパス針のリアルタイム同期（中央中心で滑らかに回転）
     function updateMapHeading(heading) {
       if (isNaN(heading)) return;
       currentHeading = heading;
@@ -943,15 +971,12 @@
       const compassNeedle = document.getElementById('compassNeedleIcon');
 
       if (headingMode === 'heading-up') {
-        // 🚗 ヘディングアップ: 進行方向を上にするため地図ペインを -heading 度回転
         if (mapEl) {
           mapEl.classList.add('heading-up-active');
-          const pane = mapEl.querySelector('.leaflet-map-pane');
-          if (pane) {
-            pane.style.transform = `rotate(${-heading}deg)`;
-          }
+          // #map全体を画面中央(50% 50%)中心に回転
+          mapEl.style.transform = `rotate(${-heading}deg)`;
         }
-        // マーカー・文字（逆回転して常に水平・読みやすい正立を保持）
+        // 配達先ピン・文字（逆回転して常に水平・正立を保つ）
         document.querySelectorAll('.custom-delivery-pin, .gps-log-start-pin, .gps-log-end-pin, .leaflet-popup').forEach(el => {
           el.style.transform = `rotate(${heading}deg)`;
         });
@@ -960,28 +985,22 @@
         if (carMarkerEl) {
           carMarkerEl.style.transform = 'rotate(0deg)';
         }
-        // コンパス針は実際の北を指す（-heading 度回転）
+        // コンパス針は実際の北を指す
         if (compassNeedle) {
           compassNeedle.style.transform = `rotate(${-heading}deg)`;
         }
       } else {
-        // 🧭 ノースアップ: 北上固定（地図回転 0 度）
         if (mapEl) {
           mapEl.classList.remove('heading-up-active');
-          const pane = mapEl.querySelector('.leaflet-map-pane');
-          if (pane) {
-            pane.style.transform = 'none';
-          }
+          mapEl.style.transform = 'none';
         }
         document.querySelectorAll('.custom-delivery-pin, .gps-log-start-pin, .gps-log-end-pin, .leaflet-popup').forEach(el => {
           el.style.transform = 'none';
         });
-        // 車両マーカーは現在の方位角を向く
         const carMarkerEl = document.querySelector('.car-marker-container');
         if (carMarkerEl) {
           carMarkerEl.style.transform = `rotate(${heading}deg)`;
         }
-        // コンパス針は北（0 度固定）
         if (compassNeedle) {
           compassNeedle.style.transform = 'rotate(0deg)';
         }
@@ -1738,30 +1757,35 @@
         availableTileLayers['carto'] = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
           maxZoom: 19,
           subdomains: 'abcd',
+          keepBuffer: 12,
           attribution: '© <a href="https://carto.com/">CARTO</a> © <a href="https://www.openstreetmap.org/">OSM</a>'
         });
 
         // 2. OpenStreetMap 標準
         availableTileLayers['osm'] = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           maxZoom: 19,
+          keepBuffer: 12,
           attribution: '© <a href="https://www.openstreetmap.org/">OpenStreetMap</a>'
         });
 
         // 3. 国土地理院 航空写真
         availableTileLayers['photo'] = L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg', {
           maxZoom: 18,
+          keepBuffer: 12,
           attribution: '© <a href="https://maps.gsi.go.jp/">国土地理院 航空写真</a>'
         });
 
         // 4. 国土地理院 淡色地図
         availableTileLayers['pale'] = L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png', {
           maxZoom: 18,
+          keepBuffer: 12,
           attribution: '© <a href="https://maps.gsi.go.jp/">国土地理院</a>'
         });
 
         // 5. 国土地理院 標準地図
         availableTileLayers['std'] = L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', {
           maxZoom: 18,
+          keepBuffer: 12,
           attribution: '© <a href="https://maps.gsi.go.jp/">国土地理院</a>'
         });
 

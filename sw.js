@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lively-navi-v40-heading-up-north-up-compass-toggle';
+const CACHE_NAME = 'lively-navi-v41-heading-up-160-diagonal-smooth-center';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
