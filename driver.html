@@ -656,12 +656,12 @@
               </div>
             </button>
 
-            <!-- 🧭 文字なしスッキリ地図（ヘディングアップ進行方向推奨） -->
+            <!-- 文字なしスッキリ地図 -->
             <button class="btn btn-white map-choice-btn" id="mapChoice_carto_nolabels" style="justify-content:flex-start; padding:11px 14px; font-size:13px;" onclick="switchMapLayer('carto_nolabels')">
               <span style="font-size:20px; margin-right:4px;">✨</span>
               <div style="text-align:left;">
-                <b style="color:#0f172a; display:block;">スッキリ道路地図 (文字なし) 【進行方向推奨】</b>
-                <span style="font-size:11px; color:#0284c7; font-weight:600;">地図が回転しても文字が邪魔にならず視認性抜群</span>
+                <b style="color:#0f172a; display:block;">スッキリ道路地図 (文字なし)</b>
+                <span style="font-size:11px; color:#64748b;">道路・建物の形と配達ピンに集中できる地図</span>
               </div>
             </button>
 
@@ -754,10 +754,10 @@
     // キャッシュ互換性用（古いキャッシュが残っている端末でのエラーを100%防止）
     window.hookMapTouchRotation = function() {};
 
-    // --- Service Worker 強制更新 (v55) ---
+    // --- Service Worker 強制更新 (v56) ---
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=55').then((reg) => {
+        navigator.serviceWorker.register('sw.js?v=56').then((reg) => {
           reg.update();
         }).catch(err => console.log('SW registration failed:', err));
       });

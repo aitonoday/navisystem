@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lively-navi-v55-rock-solid-north-up-pure-high-speed';
+const CACHE_NAME = 'lively-navi-v56-clean-map-selector-text';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
