@@ -827,10 +827,10 @@
     // キャッシュ互換性用（古いキャッシュが残っている端末でのエラーを100%防止）
     window.hookMapTouchRotation = function() {};
 
-    // --- Service Worker 強制更新 (v51) ---
+    // --- Service Worker 強制更新 (v52) ---
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=51').then((reg) => {
+        navigator.serviceWorker.register('sw.js?v=52').then((reg) => {
           reg.update();
         }).catch(err => console.log('SW registration failed:', err));
       });
@@ -913,11 +913,11 @@
         }
       }
 
-      if (map) {
+      // 🧭 進行方向 / 北上固定 ボタンを押した時は、常に現在地追従をONにし、現在地を地図の中心に配置！
+      shouldCenterOnUser = true;
+      if (map && currentUserCoords) {
         map.invalidateSize();
-        if (currentUserCoords && shouldCenterOnUser) {
-          map.setView([currentUserCoords.lat, currentUserCoords.lng], map.getZoom(), { animate: false });
-        }
+        map.setView([currentUserCoords.lat, currentUserCoords.lng], map.getZoom(), { animate: true });
       }
 
       updateMapHeading(currentHeading);

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lively-navi-v51-absolute-manual-control-lock';
+const CACHE_NAME = 'lively-navi-v52-recenter-on-compass-toggle';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
