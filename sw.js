@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lively-navi-v54-pure-native-smooth-north-up';
+const CACHE_NAME = 'lively-navi-v55-rock-solid-north-up-pure-high-speed';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
