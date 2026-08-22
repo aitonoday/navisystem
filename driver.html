@@ -823,10 +823,10 @@
     // キャッシュ互換性用（古いキャッシュが残っている端末でのエラーを100%防止）
     window.hookMapTouchRotation = function() {};
 
-    // --- Service Worker 強制更新 (v42) ---
+    // --- Service Worker 強制更新 (v43) ---
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=42').then((reg) => {
+        navigator.serviceWorker.register('sw.js?v=43').then((reg) => {
           reg.update();
         }).catch(err => console.log('SW registration failed:', err));
       });
@@ -1229,6 +1229,7 @@
           lng: depot.lng,
           isDone: true, // 出発時は完了扱い
           isDepot: true,
+          isStartDepot: true,
           memo: '出発拠点'
         };
 
@@ -1240,8 +1241,9 @@
           address: depot.address,
           lat: depot.lat,
           lng: depot.lng,
-          isDone: false, // 最終配達後に案内
+          isDone: false, // 最終帰着
           isDepot: true,
+          isReturnDepot: true,
           memo: '最終帰還拠点'
         };
 
@@ -1378,21 +1380,24 @@
       container.innerHTML = '';
 
       currentCourse.items.forEach(item => {
-        const isStartDepot = (item.order === 0 || item.code === 'START');
+        const isStartDepot = item.isStartDepot || (item.order === 0 || item.code === 'START' || String(item.id).startsWith('depot_start_'));
+        const isReturnDepot = item.isReturnDepot || (item.code === 'RETURN' || String(item.id).startsWith('depot_return_'));
+
         const card = document.createElement('div');
         card.className = `dest-select-card ${item.isDone ? 'completed' : ''}`;
         const codeDisplay = item.code && !item.isDepot ? `<span style="font-size:11px; color:#64748b; background:#f1f5f9; padding:1px 5px; border-radius:4px; margin-right:4px;">[${item.code}]</span>` : '';
         
-        const orderDisplay = isStartDepot ? 'START' : (item.code === 'RETURN' ? 'GOAL' : `${item.order || item.id}`);
+        const orderDisplay = isStartDepot ? 'START' : (isReturnDepot ? 'GOAL' : `${item.order || item.id}`);
         const nameDisplay = item.isDepot ? item.name : `${item.name} 様`;
 
         let statusBadgeHtml = '';
         if (isStartDepot) {
-          // 起点は配達チェック不要
           statusBadgeHtml = `<span style="font-size:11px; padding:2px 8px; border-radius:10px; font-weight:700; background:#10b981; color:#fff;">🏁 出発拠点</span>`;
-        } else if (item.code === 'RETURN') {
-          statusBadgeHtml = `<span style="font-size:11px; padding:2px 8px; border-radius:10px; font-weight:700; background:${item.isDone ? '#10b981' : '#0284c7'}; color:#fff;">${item.isDone ? '✅ 帰着済' : '🏢 帰還地点'}</span>`;
+        } else if (isReturnDepot) {
+          // 🏢 帰着地点（未配達マークではなく帰還地点/帰着完了バッジを表示）
+          statusBadgeHtml = `<span style="font-size:11px; padding:2px 8px; border-radius:10px; font-weight:700; background:${item.isDone ? '#10b981' : '#0284c7'}; color:#fff;">${item.isDone ? '✅ 帰着完了' : '🏢 帰還地点'}</span>`;
         } else {
+          // 一般配達先
           statusBadgeHtml = `<span style="font-size:11px; padding:2px 8px; border-radius:10px; font-weight:700; background:${item.isDone ? '#10b981' : '#0d9488'}; color:#fff;">${item.isDone ? '✅ 配達済' : '未配達'}</span>`;
         }
 
@@ -1402,6 +1407,17 @@
             <div style="display:flex; gap:6px; margin-top:8px;">
               <button class="btn btn-primary" style="flex:1; padding:7px; font-size:12px;" onclick="event.stopPropagation(); setTargetAndBeginTransitDirect('${item.id}')">
                 🏢 起点へ戻る/確認
+              </button>
+            </div>
+          `;
+        } else if (isReturnDepot) {
+          actionButtonsHtml = `
+            <div style="display:flex; gap:6px; margin-top:8px;">
+              <button class="btn btn-primary" style="flex:1; padding:8px; font-size:12px; background:#0284c7; border-color:#0284c7;" onclick="event.stopPropagation(); setTargetAndBeginTransitDirect('${item.id}')">
+                🏢 帰着拠点へ向かう
+              </button>
+              <button class="btn btn-white" style="padding:8px 12px; font-size:11px;" onclick="event.stopPropagation(); toggleItemDoneState('${item.id}')">
+                ${item.isDone ? '↩ 未帰着に戻す' : '✅ 帰着済にする'}
               </button>
             </div>
           `;
@@ -1956,8 +1972,9 @@
 
     function updateNavStats() {
       if (!currentCourse || !currentCourse.items) return;
-      const doneCount = currentCourse.items.filter(i => i.isDone).length;
-      const totalCount = currentCourse.items.length;
+      const realItems = currentCourse.items.filter(i => !i.isDepot && !i.isStartDepot && !i.isReturnDepot);
+      const doneCount = realItems.filter(i => i.isDone).length;
+      const totalCount = realItems.length;
       document.getElementById('navDeliveredCount').innerText = doneCount;
       document.getElementById('navTotalCount').innerText = totalCount;
     }
@@ -1985,14 +2002,14 @@
           `;
           iconSize = [40, 50];
           iconAnchor = [20, 25];
-        } else if (item.code === 'START' || item.order === 0) {
+        } else if (item.isStartDepot || item.order === 0 || item.code === 'START' || String(item.id).startsWith('depot_start_')) {
           // 🏁 出発起点
           iconHtml = `<div class="dest-pin-badge" style="background:#10b981; border-color:#059669;">🏁</div>`;
           iconSize = [30, 30];
           iconAnchor = [15, 15];
-        } else if (item.code === 'RETURN') {
-          // 🏢 帰還拠点
-          iconHtml = `<div class="dest-pin-badge" style="background:#0284c7; border-color:#0369a1;">🏢</div>`;
+        } else if (item.isReturnDepot || item.code === 'RETURN' || String(item.id).startsWith('depot_return_')) {
+          // 🏢 帰着拠点（未配達番号ではなく帰還アイコン）
+          iconHtml = `<div class="dest-pin-badge" style="background:${item.isDone ? '#10b981' : '#0284c7'}; border-color:${item.isDone ? '#059669' : '#0369a1'};">🏢${item.isDone ? '✔' : ''}</div>`;
           iconSize = [30, 30];
           iconAnchor = [15, 15];
         } else if (item.isDone) {
@@ -2001,7 +2018,7 @@
           iconSize = [26, 26];
           iconAnchor = [13, 13];
         } else {
-          // 未達: 配達順番号バッジ（#なしの数字のみ）
+          // 配達先: 配達順番号バッジ（#なしの数字のみ）
           iconHtml = `<div class="dest-pin-badge">${item.order || item.id}</div>`;
           iconSize = [26, 26];
           iconAnchor = [13, 13];
@@ -2019,7 +2036,7 @@
           zIndexOffset: isTarget ? 2000 : (item.isDepot ? 1500 : 500)
         }).addTo(map);
 
-        const titleText = (item.order === 0) ? `🏁 ${item.name}` : (item.code === 'RETURN' ? `🏢 ${item.name}` : `${item.order || item.id} ${item.name} 様`);
+        const titleText = (item.isStartDepot || item.order === 0) ? `🏁 ${item.name}` : (item.isReturnDepot ? `🏢 ${item.name}` : `${item.order || item.id} ${item.name} 様`);
 
         marker.bindPopup(`
           <div style="min-width:170px; font-size:12px; font-family:'Noto Sans JP',sans-serif;">

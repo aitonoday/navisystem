@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lively-navi-v42-clean-ui-pinch-zoom-only';
+const CACHE_NAME = 'lively-navi-v43-clean-return-depot-status';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
