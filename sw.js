@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lively-navi-v58-driver-pin-auth-and-instant-lock';
+const CACHE_NAME = 'lively-navi-v59-default-labeled-standard-map';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();

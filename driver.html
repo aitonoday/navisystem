@@ -790,10 +790,10 @@
     // キャッシュ互換性用（古いキャッシュが残っている端末でのエラーを100%防止）
     window.hookMapTouchRotation = function() {};
 
-    // --- Service Worker 強制更新 (v58) ---
+    // --- Service Worker 強制更新 (v59) ---
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=58').then((reg) => {
+        navigator.serviceWorker.register('sw.js?v=59').then((reg) => {
           reg.update();
         }).catch(err => console.log('SW registration failed:', err));
       });
@@ -1680,7 +1680,7 @@
           attribution: '© <a href="https://carto.com/">CARTO</a> © <a href="https://www.openstreetmap.org/">OSM</a>'
         });
 
-        // 1-2. CARTO Voyager No Labels (✨ スッキリ道路地図：文字なし・進行方向モード推奨)
+        // 1-2. CARTO Voyager No Labels (✨ スッキリ道路地図：文字なし)
         availableTileLayers['carto_nolabels'] = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png', {
           maxZoom: 19,
           subdomains: 'abcd',
@@ -1716,8 +1716,9 @@
           attribution: '© <a href="https://maps.gsi.go.jp/">国土地理院</a>'
         });
 
-        const savedMapKey = localStorage.getItem(PREFERRED_MAP_KEY) || 'carto';
-        currentTileLayerKey = availableTileLayers[savedMapKey] ? savedMapKey : 'carto';
+        // 🗺️ デフォルトは常に「スマートナビ（文字あり・標準）」
+        const savedMapKey = localStorage.getItem(PREFERRED_MAP_KEY);
+        currentTileLayerKey = (savedMapKey && availableTileLayers[savedMapKey]) ? savedMapKey : 'carto';
 
         map = L.map('map', { 
           zoomControl: false,
