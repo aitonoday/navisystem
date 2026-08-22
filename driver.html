@@ -827,10 +827,10 @@
     // キャッシュ互換性用（古いキャッシュが残っている端末でのエラーを100%防止）
     window.hookMapTouchRotation = function() {};
 
-    // --- Service Worker 強制更新 (v50) ---
+    // --- Service Worker 強制更新 (v51) ---
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=50').then((reg) => {
+        navigator.serviceWorker.register('sw.js?v=51').then((reg) => {
           reg.update();
         }).catch(err => console.log('SW registration failed:', err));
       });
@@ -1827,10 +1827,11 @@
           layers: [availableTileLayers[currentTileLayerKey]]
         }).setView([34.685062, 135.832809], 16);
 
-        // ユーザーがドラッグ移動したら追従を一時停止し、自由探索のため北上固定に自動切替
-        map.on('dragstart', () => {
-          shouldCenterOnUser = false;
-          // 🗺️ 手動探索中はズレを防ぐため一時的に北上（ノースアップ）で正確にスクロール
+        // 🗺️ ユーザーが地図を移動（ドラッグ）または拡大縮小（ピンチ）した時の完全停止処理
+        function pauseAutoFollowOnUserInteraction() {
+          shouldCenterOnUser = false; // 📍 ボタンが押されるまで現在地追従を100%完全停止！
+
+          // 手動探索中は干渉・ガタつき・ズレを防ぐため、正立（ノースアップ）で超高速・滑らかに動作
           const mapEl = document.getElementById('map');
           if (mapEl) {
             mapEl.classList.remove('heading-up-active');
@@ -1840,25 +1841,14 @@
           document.querySelectorAll('.custom-delivery-pin, .gps-log-start-pin, .gps-log-end-pin, .leaflet-popup').forEach(el => {
             el.style.transform = 'none';
           });
-        });
+        }
 
-        // 🔍 ピンチズーム（拡大縮小）開始時：計算の狂いを防ぐため一時的に正立
-        map.on('zoomstart', () => {
-          const mapEl = document.getElementById('map');
-          if (mapEl && headingMode === 'heading-up') {
-            const pane = mapEl.querySelector('.leaflet-map-pane');
-            if (pane) pane.style.transform = 'none';
-          }
-        });
+        map.on('dragstart', pauseAutoFollowOnUserInteraction);
+        map.on('zoomstart', pauseAutoFollowOnUserInteraction);
 
-        // 🔍 ズーム完了時：現在地が追従中であれば寸分の狂いもなく中心に再同期して回転復帰
+        // 🔍 ズーム完了時：倍率のみを維持（勝手に現在地へ戻さない！）
         map.on('zoomend', () => {
-          if (map) {
-            if (currentUserCoords && shouldCenterOnUser) {
-              map.setView([currentUserCoords.lat, currentUserCoords.lng], map.getZoom(), { animate: false });
-              updateMapHeading(currentHeading);
-            }
-          }
+          // ユーザーが変更したズーム倍率はそのまま保持され、📍ボタンが押されるまで自由な位置・倍率を完全キープ
         });
 
         // 地図タップによる地点修正

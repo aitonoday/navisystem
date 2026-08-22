@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lively-navi-v50-zero-drift-pinch-zoom-and-pan';
+const CACHE_NAME = 'lively-navi-v51-absolute-manual-control-lock';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
