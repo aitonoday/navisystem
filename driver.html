@@ -295,11 +295,6 @@
       transition: transform 0.35s cubic-bezier(0.25, 1, 0.5, 1);
       transform-origin: 50% 50% !important;
     }
-    /* タイル描画層のみを広範囲にスケーリングして四隅・左右のグレー見切れを100%防止 */
-    #map.heading-up-active .leaflet-tile-pane {
-      transform: scale(2.6);
-      transform-origin: 50% 50%;
-    }
 
     /* 🚚 02. NAVIGATION 公式デザイン HUDカード（画面最上部） */
     #transit-target-card {
@@ -832,10 +827,10 @@
     // キャッシュ互換性用（古いキャッシュが残っている端末でのエラーを100%防止）
     window.hookMapTouchRotation = function() {};
 
-    // --- Service Worker 強制更新 (v49) ---
+    // --- Service Worker 強制更新 (v50) ---
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=49').then((reg) => {
+        navigator.serviceWorker.register('sw.js?v=50').then((reg) => {
           reg.update();
         }).catch(err => console.log('SW registration failed:', err));
       });
@@ -1847,10 +1842,22 @@
           });
         });
 
-        // ユーザーが拡大・縮小したズームレベルを保持
+        // 🔍 ピンチズーム（拡大縮小）開始時：計算の狂いを防ぐため一時的に正立
+        map.on('zoomstart', () => {
+          const mapEl = document.getElementById('map');
+          if (mapEl && headingMode === 'heading-up') {
+            const pane = mapEl.querySelector('.leaflet-map-pane');
+            if (pane) pane.style.transform = 'none';
+          }
+        });
+
+        // 🔍 ズーム完了時：現在地が追従中であれば寸分の狂いもなく中心に再同期して回転復帰
         map.on('zoomend', () => {
           if (map) {
-            // 現在のズーム倍率を維持
+            if (currentUserCoords && shouldCenterOnUser) {
+              map.setView([currentUserCoords.lat, currentUserCoords.lng], map.getZoom(), { animate: false });
+              updateMapHeading(currentHeading);
+            }
           }
         });
 

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lively-navi-v49-smart-hybrid-heading-up-browsing';
+const CACHE_NAME = 'lively-navi-v50-zero-drift-pinch-zoom-and-pan';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
