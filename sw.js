@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lively-navi-v48-perfect-drag-rotation-correction';
+const CACHE_NAME = 'lively-navi-v49-smart-hybrid-heading-up-browsing';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();

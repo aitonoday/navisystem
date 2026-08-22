@@ -832,50 +832,10 @@
     // キャッシュ互換性用（古いキャッシュが残っている端末でのエラーを100%防止）
     window.hookMapTouchRotation = function() {};
 
-    // 🧭 ヘディングアップ時のドラッグ方向完全補正（指の動いた向きと100%同一方向に地図をスクロール）
-    (function hookLeafletDragRotation() {
-      if (typeof L === 'undefined' || !L.Draggable) return;
-
-      const origOnMove = L.Draggable.prototype._onMove;
-      L.Draggable.prototype._onMove = function (e) {
-        if (!this._enabled) return;
-
-        // 地図ドラッグかつヘディングアップモード中のみ回転角補正
-        if (this._element && (this._element.classList && this._element.classList.contains('leaflet-map-pane') || this._element.id === 'map') && headingMode === 'heading-up' && currentHeading) {
-          const first = (e.touches && e.touches.length === 1 ? e.touches[0] : e);
-          const newPoint = new L.Point(first.clientX, first.clientY);
-          
-          if (!this._startPoint) {
-            this._startPoint = newPoint;
-          }
-          
-          const rawOffset = newPoint.subtract(this._startPoint);
-          if (!rawOffset.x && !rawOffset.y) return;
-
-          // 2D回転行列によるベクトル逆変換
-          const rad = (currentHeading * Math.PI) / 180;
-          const cos = Math.cos(rad);
-          const sin = Math.sin(rad);
-
-          const rotX = rawOffset.x * cos - rawOffset.y * sin;
-          const rotY = rawOffset.x * sin + rawOffset.y * cos;
-
-          const correctedOffset = new L.Point(rotX, rotY);
-          const targetPoint = this._startPos.add(correctedOffset);
-
-          L.DomUtil.setPosition(this._element, targetPoint);
-          this.fire('drag');
-          return;
-        }
-
-        origOnMove.call(this, e);
-      };
-    })();
-
-    // --- Service Worker 強制更新 (v48) ---
+    // --- Service Worker 強制更新 (v49) ---
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=48').then((reg) => {
+        navigator.serviceWorker.register('sw.js?v=49').then((reg) => {
           reg.update();
         }).catch(err => console.log('SW registration failed:', err));
       });
@@ -1872,9 +1832,19 @@
           layers: [availableTileLayers[currentTileLayerKey]]
         }).setView([34.685062, 135.832809], 16);
 
-        // ユーザーがドラッグ移動したら追従を一時停止
+        // ユーザーがドラッグ移動したら追従を一時停止し、自由探索のため北上固定に自動切替
         map.on('dragstart', () => {
           shouldCenterOnUser = false;
+          // 🗺️ 手動探索中はズレを防ぐため一時的に北上（ノースアップ）で正確にスクロール
+          const mapEl = document.getElementById('map');
+          if (mapEl) {
+            mapEl.classList.remove('heading-up-active');
+            const pane = mapEl.querySelector('.leaflet-map-pane');
+            if (pane) pane.style.transform = 'none';
+          }
+          document.querySelectorAll('.custom-delivery-pin, .gps-log-start-pin, .gps-log-end-pin, .leaflet-popup').forEach(el => {
+            el.style.transform = 'none';
+          });
         });
 
         // ユーザーが拡大・縮小したズームレベルを保持
@@ -1915,6 +1885,8 @@
         shouldCenterOnUser = true;
         // ユーザーが変更したズームレベルを維持したまま現在地を中央に配置
         map.setView([currentUserCoords.lat, currentUserCoords.lng], map.getZoom(), { animate: true });
+        // 🧭 進行方向モード（ヘディングアップ）が設定されていれば滑らかに回転復帰！
+        updateMapHeading(currentHeading);
       } else {
         alert("GPS測位中です。少々お待ちください。");
       }
