@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lively-navi-v43-clean-return-depot-status';
+const CACHE_NAME = 'lively-navi-v44-smart-auto-zoom-50m';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();

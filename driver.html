@@ -823,10 +823,10 @@
     // キャッシュ互換性用（古いキャッシュが残っている端末でのエラーを100%防止）
     window.hookMapTouchRotation = function() {};
 
-    // --- Service Worker 強制更新 (v43) ---
+    // --- Service Worker 強制更新 (v44) ---
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=43').then((reg) => {
+        navigator.serviceWorker.register('sw.js?v=44').then((reg) => {
           reg.update();
         }).catch(err => console.log('SW registration failed:', err));
       });
@@ -856,7 +856,11 @@
     };
 
     const STORAGE_KEY = 'navisystem_courses';
-    const PROXIMITY_THRESHOLD_METERS = 100;
+    // 🎯 スマート近接オートズーム設定（50m手前で超詳細倍率へ自動拡大）
+    const PROXIMITY_THRESHOLD_METERS = 50; 
+    const CRUISE_ZOOM_LEVEL = 16;          // 巡航時のズーム倍率
+    const APPROACH_ZOOM_LEVEL = 19;        // 50m以内接近時の超詳細ズーム倍率（建物・進入路確認）
+    let isApproachingTarget = false;
 
     let currentCourse = null;
     let currentTargetItem = null;
@@ -1511,6 +1515,15 @@
       currentLegLogs = [];
       plotMarkers();
 
+      // 🔍 次の目的地への出発時はオートズームフラグを解除し、巡航ズーム（16）にスムーズ調整
+      isApproachingTarget = false;
+      if (map && currentUserCoords && shouldCenterOnUser) {
+        map.flyTo([currentUserCoords.lat, currentUserCoords.lng], CRUISE_ZOOM_LEVEL, {
+          animate: true,
+          duration: 0.8
+        });
+      }
+
       // 🔴 登録軌跡（赤色の丸ドット点線）を取得・描画
       const toCode = item.code || '';
       loadAndDrawRegisteredLeg(currentLegFromCode, toCode, currentLegFromOrder, targetOrder, currentCourse ? currentCourse.id : null);
@@ -1577,10 +1590,24 @@
           badgeEl.innerText = "🎯 目的地付近！";
           badgeEl.style.color = "#4ade80";
           arrivalBtn.classList.add('near-pulse');
+
+          // 🔍 50m手前に到達した瞬間に、建物・進入路がくっきり見える超詳細倍率(19)へ自動拡大！
+          if (!isApproachingTarget && map && currentUserCoords && shouldCenterOnUser) {
+            isApproachingTarget = true;
+            map.flyTo([currentUserCoords.lat, currentUserCoords.lng], APPROACH_ZOOM_LEVEL, {
+              animate: true,
+              duration: 0.9
+            });
+          }
         } else {
           badgeEl.innerText = "案内中";
           badgeEl.style.color = "#94a3b8";
           arrivalBtn.classList.remove('near-pulse');
+
+          // 70m以上離れた場合は接近フラグをリセット
+          if (isApproachingTarget && distMeters > PROXIMITY_THRESHOLD_METERS + 20) {
+            isApproachingTarget = false;
+          }
         }
       } else {
         badgeEl.innerText = "GPS接続中";
