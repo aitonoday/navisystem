@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lively-navi-v53-crystal-clear-compass-button';
+const CACHE_NAME = 'lively-navi-v54-pure-native-smooth-north-up';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();

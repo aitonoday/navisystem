@@ -290,8 +290,8 @@
       margin: 0;
       background: #f1f5f9;
     }
-    /* 🧭 ヘディングアップ時のLeafletペイン回転（中心は厳密に画面中央 50% 50% に100%固定） */
-    #map .leaflet-map-pane {
+    /* 🧭 ヘディングアップ有効時のみ回転アニメーションを適用 */
+    #map.heading-up-active .leaflet-map-pane {
       transition: transform 0.35s cubic-bezier(0.25, 1, 0.5, 1);
       transform-origin: 50% 50% !important;
     }
@@ -817,10 +817,10 @@
     // キャッシュ互換性用（古いキャッシュが残っている端末でのエラーを100%防止）
     window.hookMapTouchRotation = function() {};
 
-    // --- Service Worker 強制更新 (v53) ---
+    // --- Service Worker 強制更新 (v54) ---
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=53').then((reg) => {
+        navigator.serviceWorker.register('sw.js?v=54').then((reg) => {
           reg.update();
         }).catch(err => console.log('SW registration failed:', err));
       });
@@ -966,11 +966,13 @@
           mapEl.classList.remove('heading-up-active');
           const pane = mapEl.querySelector('.leaflet-map-pane');
           if (pane) {
-            pane.style.transform = 'none';
+            pane.style.transform = '';
+            pane.style.transition = '';
           }
         }
         document.querySelectorAll('.custom-delivery-pin, .gps-log-start-pin, .gps-log-end-pin, .leaflet-popup').forEach(el => {
-          el.style.transform = 'none';
+          el.style.transform = '';
+          el.style.transition = '';
         });
         const carMarkerEl = document.querySelector('.car-marker-container');
         if (carMarkerEl) {
