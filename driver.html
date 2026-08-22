@@ -832,10 +832,50 @@
     // キャッシュ互換性用（古いキャッシュが残っている端末でのエラーを100%防止）
     window.hookMapTouchRotation = function() {};
 
-    // --- Service Worker 強制更新 (v47) ---
+    // 🧭 ヘディングアップ時のドラッグ方向完全補正（指の動いた向きと100%同一方向に地図をスクロール）
+    (function hookLeafletDragRotation() {
+      if (typeof L === 'undefined' || !L.Draggable) return;
+
+      const origOnMove = L.Draggable.prototype._onMove;
+      L.Draggable.prototype._onMove = function (e) {
+        if (!this._enabled) return;
+
+        // 地図ドラッグかつヘディングアップモード中のみ回転角補正
+        if (this._element && (this._element.classList && this._element.classList.contains('leaflet-map-pane') || this._element.id === 'map') && headingMode === 'heading-up' && currentHeading) {
+          const first = (e.touches && e.touches.length === 1 ? e.touches[0] : e);
+          const newPoint = new L.Point(first.clientX, first.clientY);
+          
+          if (!this._startPoint) {
+            this._startPoint = newPoint;
+          }
+          
+          const rawOffset = newPoint.subtract(this._startPoint);
+          if (!rawOffset.x && !rawOffset.y) return;
+
+          // 2D回転行列によるベクトル逆変換
+          const rad = (currentHeading * Math.PI) / 180;
+          const cos = Math.cos(rad);
+          const sin = Math.sin(rad);
+
+          const rotX = rawOffset.x * cos - rawOffset.y * sin;
+          const rotY = rawOffset.x * sin + rawOffset.y * cos;
+
+          const correctedOffset = new L.Point(rotX, rotY);
+          const targetPoint = this._startPos.add(correctedOffset);
+
+          L.DomUtil.setPosition(this._element, targetPoint);
+          this.fire('drag');
+          return;
+        }
+
+        origOnMove.call(this, e);
+      };
+    })();
+
+    // --- Service Worker 強制更新 (v48) ---
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=47').then((reg) => {
+        navigator.serviceWorker.register('sw.js?v=48').then((reg) => {
           reg.update();
         }).catch(err => console.log('SW registration failed:', err));
       });

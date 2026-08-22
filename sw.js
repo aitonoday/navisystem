@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lively-navi-v47-true-center-pane-rotation';
+const CACHE_NAME = 'lively-navi-v48-perfect-drag-rotation-correction';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
