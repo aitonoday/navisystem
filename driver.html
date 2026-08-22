@@ -682,31 +682,21 @@
         <!-- 地図本体（全画面） -->
         <div id="map"></div>
 
-        <!-- 右下フローティングコントロール（🧭 コンパス方位切替 ＆ 🗺️ 地図切替 ＆ 📍 現在地センタリング） -->
-        <div style="position:absolute; bottom:20px; right:16px; z-index:1000; display:flex; flex-direction:column; gap:10px; align-items:center;">
-          <!-- 🧭 ヘディングアップ / ノースアップ 切替コンパスボタン -->
-          <button id="btnToggleHeadingMode" class="compass-btn" onclick="toggleHeadingMode()" title="ヘディングアップ / ノースアップ切替">
-            <div id="compassNeedleIcon" class="compass-needle-icon">
-              <!-- 精緻なコンパス針 SVG -->
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <!-- 北の赤い針 -->
-                <polygon points="12,2 15,12 12,10 9,12" fill="#ef4444" />
-                <!-- 南のシルバー針 -->
-                <polygon points="12,22 15,12 12,14 9,12" fill="#94a3b8" />
-                <!-- 中央ピボット -->
-                <circle cx="12" cy="12" r="1.5" fill="#0f172a" />
-              </svg>
-            </div>
-            <span id="compassModeText" class="compass-mode-label">北上固定</span>
+        <!-- 右下フローティングコントロール（🧭 方位切替 ＆ 🗺️ 地図切替 ＆ 📍 現在地センタリング） -->
+        <div style="position:absolute; bottom:24px; right:16px; z-index:1000; display:flex; flex-direction:column; gap:10px; align-items:center;">
+          <!-- 🧭 ヘディングアップ / ノースアップ 切替ボタン（大きくわかりやすい 🧭 アイコン） -->
+          <button id="btnToggleHeadingMode" class="btn btn-white" style="border-radius:50%; width:48px; height:48px; padding:0; box-shadow:0 8px 20px rgba(15,23,42,0.2); border:2px solid #0284c7; display:flex; flex-direction:column; align-items:center; justify-content:center; background:#ffffff;" onclick="toggleHeadingMode()" title="方位モード切替（北上固定 ⇄ 進行方向追従）">
+            <span id="compassNeedleIcon" style="font-size:24px; line-height:1; display:inline-block; transition:transform 0.3s ease;">🧭</span>
+            <span id="compassModeText" style="font-size:8px; font-weight:800; color:#0284c7; line-height:1; margin-top:1px;">北上</span>
           </button>
 
           <!-- 🗺️ 地図の種類切替ボタン -->
-          <button id="btnOpenMapSelector" class="btn btn-white" style="border-radius:50%; width:46px; height:46px; padding:0; box-shadow:0 6px 16px rgba(0,0,0,0.15); font-size:20px; color:#0f172a; border:1.5px solid #e2e8f0;" onclick="openMapSelectorModal()" title="地図の種類を変更">
+          <button id="btnOpenMapSelector" class="btn btn-white" style="border-radius:50%; width:48px; height:48px; padding:0; box-shadow:0 6px 16px rgba(0,0,0,0.15); font-size:22px; color:#0f172a; border:1.5px solid #e2e8f0;" onclick="openMapSelectorModal()" title="地図の種類を変更">
             🗺️
           </button>
 
           <!-- 📍 現在地へセンタリングするボタン -->
-          <button id="btnRecenterLocation" class="btn btn-white" style="border-radius:50%; width:46px; height:46px; padding:0; box-shadow:0 6px 16px rgba(0,0,0,0.12); font-size:20px; color:#0d9488; border:1.5px solid #e2e8f0;" onclick="centerOnUserLocation()" title="現在地を中心にする">
+          <button id="btnRecenterLocation" class="btn btn-white" style="border-radius:50%; width:48px; height:48px; padding:0; box-shadow:0 6px 16px rgba(0,0,0,0.12); font-size:22px; color:#0d9488; border:1.5px solid #e2e8f0;" onclick="centerOnUserLocation()" title="現在地を中心にする">
             📍
           </button>
         </div>
@@ -827,10 +817,10 @@
     // キャッシュ互換性用（古いキャッシュが残っている端末でのエラーを100%防止）
     window.hookMapTouchRotation = function() {};
 
-    // --- Service Worker 強制更新 (v52) ---
+    // --- Service Worker 強制更新 (v53) ---
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=52').then((reg) => {
+        navigator.serviceWorker.register('sw.js?v=53').then((reg) => {
           reg.update();
         }).catch(err => console.log('SW registration failed:', err));
       });
@@ -929,12 +919,14 @@
       if (!btn || !text) return;
 
       if (headingMode === 'heading-up') {
-        btn.classList.add('active-heading');
+        btn.style.borderColor = '#0284c7';
+        btn.style.background = '#f0f9ff';
         text.innerText = '進行方向';
         text.style.color = '#0284c7';
       } else {
-        btn.classList.remove('active-heading');
-        text.innerText = '北上固定';
+        btn.style.borderColor = '#94a3b8';
+        btn.style.background = '#ffffff';
+        text.innerText = '北上';
         text.style.color = '#64748b';
       }
     }

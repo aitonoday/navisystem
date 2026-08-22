@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lively-navi-v52-recenter-on-compass-toggle';
+const CACHE_NAME = 'lively-navi-v53-crystal-clear-compass-button';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
