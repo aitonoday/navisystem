@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lively-navi-v44-smart-auto-zoom-50m';
+const CACHE_NAME = 'lively-navi-v45-no-labels-clean-map-option';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();

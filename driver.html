@@ -729,8 +729,17 @@
             <button class="btn btn-white map-choice-btn" id="mapChoice_carto" style="justify-content:flex-start; padding:11px 14px; font-size:13px; border-color:#0d9488; background:#f0fdfa;" onclick="switchMapLayer('carto')">
               <span style="font-size:20px; margin-right:4px;">🗺️</span>
               <div style="text-align:left;">
-                <b style="color:#0d9488; display:block;">スマートナビ (CARTO) 【推奨】</b>
-                <span style="font-size:11px; color:#64748b;">道路や建物がくっきり見やすい</span>
+                <b style="color:#0d9488; display:block;">スマートナビ (文字あり・標準)</b>
+                <span style="font-size:11px; color:#64748b;">道路・建物・地名が見やすい標準地図</span>
+              </div>
+            </button>
+
+            <!-- 🧭 文字なしスッキリ地図（ヘディングアップ進行方向推奨） -->
+            <button class="btn btn-white map-choice-btn" id="mapChoice_carto_nolabels" style="justify-content:flex-start; padding:11px 14px; font-size:13px;" onclick="switchMapLayer('carto_nolabels')">
+              <span style="font-size:20px; margin-right:4px;">✨</span>
+              <div style="text-align:left;">
+                <b style="color:#0f172a; display:block;">スッキリ道路地図 (文字なし) 【進行方向推奨】</b>
+                <span style="font-size:11px; color:#0284c7; font-weight:600;">地図が回転しても文字が邪魔にならず視認性抜群</span>
               </div>
             </button>
 
@@ -823,10 +832,10 @@
     // キャッシュ互換性用（古いキャッシュが残っている端末でのエラーを100%防止）
     window.hookMapTouchRotation = function() {};
 
-    // --- Service Worker 強制更新 (v44) ---
+    // --- Service Worker 強制更新 (v45) ---
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=44').then((reg) => {
+        navigator.serviceWorker.register('sw.js?v=45').then((reg) => {
           reg.update();
         }).catch(err => console.log('SW registration failed:', err));
       });
@@ -1765,8 +1774,16 @@
 
     function initMap() {
       if (!map) {
-        // 1. CARTO Voyager (スマートナビ地図：視認性抜群・道路と建物がくっきり)
+        // 1. CARTO Voyager (スマートナビ地図：文字あり標準)
         availableTileLayers['carto'] = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+          maxZoom: 19,
+          subdomains: 'abcd',
+          keepBuffer: 12,
+          attribution: '© <a href="https://carto.com/">CARTO</a> © <a href="https://www.openstreetmap.org/">OSM</a>'
+        });
+
+        // 1-2. CARTO Voyager No Labels (✨ スッキリ道路地図：文字なし・進行方向モード推奨)
+        availableTileLayers['carto_nolabels'] = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png', {
           maxZoom: 19,
           subdomains: 'abcd',
           keepBuffer: 12,
